@@ -20,20 +20,20 @@
     --amber-bg: #FFF7E6;
     --amber-border: #F5C97A;
     --green: #15803d;
+    --blue: #1d4ed8;
   }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
-    background: var(--bg);
-    color: var(--text);
+    background: var(--bg); color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Helvetica Neue", Arial, sans-serif;
     line-height: 1.5;
   }
   a { color: var(--brand-dark); }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 24px 64px; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 24px 64px; }
 
   /* Top bar */
-  .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
   .topbar .tag {
     background: var(--brand-dark); color: #fff;
     font-size: 11px; font-weight: 800; letter-spacing: 1.4px;
@@ -50,18 +50,17 @@
   .topbar button.logout:hover { background: #f3f4f6; }
 
   /* Tabs */
-  .tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin-bottom: 22px; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 22px; overflow-x: auto; }
   .tab {
-    padding: 10px 14px; cursor: pointer; font-size: 13px; font-weight: 700;
+    padding: 10px 14px; cursor: pointer; font-size: 13px; font-weight: 700; white-space: nowrap;
     color: var(--muted); border: none; background: transparent;
     border-bottom: 2px solid transparent; margin-bottom: -1px;
   }
+  .tab:hover { color: var(--brand-dark); }
   .tab.active { color: var(--brand-dark); border-bottom-color: var(--brand-dark); }
 
-  /* Login screen */
-  .login-wrap {
-    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
-  }
+  /* Login */
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
   .login-card {
     width: 100%; max-width: 380px; background: #fff;
     border: 1px solid var(--border); border-radius: 16px; padding: 28px;
@@ -70,10 +69,7 @@
   .login-card h2 { margin: 12px 0 6px; color: var(--brand-dark); font-size: 22px; }
   .login-card p { margin: 0 0 18px; color: var(--muted); font-size: 13px; }
   .login-card label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--brand-dark); margin: 10px 0 4px; }
-  .login-card input {
-    width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
-    font-size: 14px; font-family: inherit;
-  }
+  .login-card input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; font-family: inherit; }
   .login-card input:focus { outline: none; border-color: var(--brand-dark); }
   .login-card button.primary {
     width: 100%; margin-top: 16px; padding: 12px;
@@ -83,57 +79,71 @@
   .login-card button.primary[disabled] { opacity: 0.5; cursor: default; }
   .login-card .err { color: var(--red); font-size: 12px; margin-top: 10px; }
 
-  /* Cards */
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  /* Cards / layout */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
   .card h2 { margin: 0 0 12px; font-size: 12px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--brand-dark); }
 
-  /* Revenue tile */
-  .revenue {
-    background: var(--brand-dark); color: #fff;
-    border-radius: 16px; padding: 22px; margin-bottom: 16px;
+  /* Hero numbers */
+  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
+  .kpi .lbl { color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; }
+  .kpi .num { color: var(--brand-dark); font-size: 26px; font-weight: 800; margin-top: 4px; letter-spacing: -0.4px; }
+  .kpi .sub { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .kpi.dark { background: var(--brand-dark); border-color: var(--brand-dark); }
+  .kpi.dark .lbl { color: var(--brand-light); opacity: 0.9; }
+  .kpi.dark .num { color: #fff; font-size: 32px; }
+  .kpi.dark .sub { color: rgba(255,255,255,0.75); }
+
+  /* Table */
+  table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.tbl th, table.tbl td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  table.tbl th { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); background: #fafaf7; position: sticky; top: 0; cursor: pointer; user-select: none; }
+  table.tbl th.sorted-asc::after { content: " ↑"; color: var(--brand-dark); }
+  table.tbl th.sorted-desc::after { content: " ↓"; color: var(--brand-dark); }
+  table.tbl tr:hover td { background: #fafaf7; }
+  table.tbl td a { color: var(--brand-dark); text-decoration: none; }
+  table.tbl td a:hover { text-decoration: underline; }
+  .table-scroll { max-height: 520px; overflow: auto; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+
+  /* Section title + tools */
+  .section-title { display: flex; align-items: center; justify-content: space-between; margin: 28px 0 10px; gap: 12px; flex-wrap: wrap; }
+  .section-title h3 { margin: 0; color: var(--brand-dark); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; }
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .toolbar input.search, .toolbar select {
+    padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px;
+    font-size: 12px; font-family: inherit; background: #fff;
   }
-  .revenue .label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: var(--brand-light); }
-  .revenue .big { font-size: 40px; font-weight: 800; margin-top: 4px; letter-spacing: -1px; }
-  .revenue .row { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.15); }
-  .revenue .row .label { opacity: 0.85; }
-  .revenue .row .val { color: #fff; font-size: 18px; font-weight: 800; margin-top: 2px; }
-
-  /* Users + Activity row */
-  .stat-row { display: flex; justify-content: space-between; margin-top: 6px; }
-  .stat-cell { flex: 1; text-align: center; }
-  .stat-cell .num { color: var(--brand-dark); font-size: 24px; font-weight: 800; }
-  .stat-cell .lbl { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-top: 2px; }
-
-  /* Nav cards (Reports, Pending Clubs) */
-  .nav-card {
-    display: flex; align-items: center; gap: 10px;
-    background: #fff; border: 1px solid var(--border); border-radius: 14px;
-    padding: 14px; cursor: pointer; transition: background 80ms;
-    margin-top: 12px;
-  }
-  .nav-card:hover { background: #f9f9f7; }
-  .nav-card.alert { background: var(--amber-bg); border-color: var(--amber-border); }
-  .nav-card .body { flex: 1; }
-  .nav-card .title { color: var(--brand-dark); font-weight: 800; font-size: 14px; }
-  .nav-card .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .nav-card .chev { color: var(--muted); font-size: 16px; }
-
-  /* List rows */
-  .section-title { display: flex; align-items: center; justify-content: space-between; margin: 24px 0 8px; }
-  .section-title h3 { margin: 0; color: var(--brand-dark); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; }
-  .section-title button.csv {
+  .toolbar input.search { min-width: 220px; }
+  .btn {
     background: #fff; border: 1px solid var(--border);
     padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
     color: var(--brand-dark); cursor: pointer;
   }
-  .row-card {
-    display: flex; align-items: center; background: #fff;
-    border: 1px solid var(--border); border-radius: 10px;
-    padding: 10px 12px; margin-top: 6px;
-  }
-  .row-card .body { flex: 1; }
+  .btn:hover { background: #f3f4f6; }
+  .btn.primary { background: var(--brand-dark); color: #fff; border-color: var(--brand-dark); }
+  .btn.danger { background: var(--red); color: #fff; border-color: var(--red); }
+
+  /* Badges */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; color: #fff; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; }
+  .badge.green { background: var(--green); }
+  .badge.red { background: var(--red); }
+  .badge.amber { background: var(--amber); }
+  .badge.muted { background: var(--muted); }
+  .badge.brand { background: var(--brand-dark); }
+  .badge.blue { background: var(--blue); }
+
+  /* Sparkline / bar chart */
+  .chart { width: 100%; height: 120px; display: block; }
+  .bar { fill: var(--brand-dark); }
+  .bar:hover { fill: #1d3329; }
+  .axis { font-size: 9px; fill: var(--muted); }
+
+  /* List rows */
+  .row-card { display: flex; align-items: center; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-top: 6px; gap: 10px; }
+  .row-card .body { flex: 1; min-width: 0; }
   .row-card .name { color: #000; font-size: 13px; font-weight: 600; }
   .row-card .meta { color: var(--muted); font-size: 11px; margin-top: 2px; }
   .row-card .amt { color: var(--brand-dark); font-size: 14px; font-weight: 800; }
@@ -144,31 +154,16 @@
   .club-card .loc { color: var(--muted); font-size: 12px; margin-top: 2px; }
   .club-card .about { color: #000; font-size: 13px; margin-top: 8px; }
   .club-card .actions { display: flex; gap: 10px; margin-top: 12px; }
-  .club-card button {
-    flex: 1; padding: 10px; border-radius: 10px;
-    font-weight: 700; font-size: 14px; cursor: pointer;
-  }
-  .club-card .approve { background: var(--brand-dark); color: #fff; border: none; }
+  .club-card button { flex: 1; padding: 10px; border-radius: 10px; font-weight: 700; font-size: 14px; cursor: pointer; border: none; }
+  .club-card .approve { background: var(--brand-dark); color: #fff; }
   .club-card .decline { background: #fff; color: var(--red); border: 1.5px solid var(--red); }
   .club-card button[disabled] { opacity: 0.5; cursor: default; }
 
   /* Reports */
   .filter-row { display: flex; gap: 6px; margin: 0 0 16px; flex-wrap: wrap; }
-  .filter-row button {
-    padding: 6px 12px; border-radius: 999px;
-    border: 1px solid var(--border); background: #fff;
-    color: var(--brand-dark); font-weight: 700; font-size: 11px; cursor: pointer;
-  }
+  .filter-row button { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); background: #fff; color: var(--brand-dark); font-weight: 700; font-size: 11px; cursor: pointer; }
   .filter-row button.active { background: var(--brand-dark); color: #fff; border-color: var(--brand-dark); }
   .report-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 8px; }
-  .badge {
-    display: inline-block; padding: 2px 8px; border-radius: 999px;
-    color: #fff; font-size: 10px; font-weight: 800; text-transform: uppercase;
-  }
-  .badge.open { background: var(--red); }
-  .badge.reviewed { background: #b58a00; }
-  .badge.dismissed { background: var(--muted); }
-  .badge.actioned { background: var(--brand-dark); }
   .report-card .head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
   .report-card .ts { color: var(--muted); font-size: 11px; }
   .report-card .kind { margin-left: auto; color: var(--brand-dark); font-size: 11px; font-weight: 800; text-transform: uppercase; }
@@ -176,33 +171,34 @@
   .report-card .note { color: #000; font-size: 13px; margin-top: 4px; }
   .report-card .meta { color: var(--muted); font-size: 11px; margin-top: 4px; }
   .report-card .actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-  .report-card .actions button {
-    padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; border: none;
-  }
+  .report-card .actions button { padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; }
   .report-card .actions .open-btn { background: var(--brand-dark); color: #fff; }
   .report-card .actions .actioned-btn { background: var(--red); color: #fff; }
-  .report-card .actions .ghost {
-    background: transparent; color: var(--brand-dark);
-    border: 1.5px solid var(--brand-dark);
-  }
+  .report-card .actions .ghost { background: transparent; color: var(--brand-dark); border: 1.5px solid var(--brand-dark); }
 
-  .empty { text-align: center; padding: 60px 24px; }
-  .empty h3 { color: var(--brand-dark); font-size: 20px; margin: 0 0 6px; }
-  .empty p { color: var(--muted); font-size: 13px; margin: 0; }
+  .empty { text-align: center; padding: 50px 24px; color: var(--muted); }
+  .empty h3 { color: var(--brand-dark); font-size: 18px; margin: 0 0 6px; }
+  .empty p { font-size: 13px; margin: 0; }
+  .loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--muted); font-size: 13px; }
+  .errbox { background: #fff5f5; border: 1px solid #fecaca; color: #991b1b; padding: 10px 12px; border-radius: 10px; font-size: 13px; }
 
-  .loading { display: flex; align-items: center; justify-content: center; padding: 60px; color: var(--muted); font-size: 13px; }
+  /* Capacity bar */
+  .capbar { width: 100%; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .capbar > div { height: 100%; background: var(--brand-dark); }
+  .capbar.warn > div { background: var(--amber); }
+  .capbar.full > div { background: var(--red); }
 </style>
 </head>
 <body>
 
-<!-- Login screen -->
+<!-- Login -->
 <div id="login" class="login-wrap" style="display:none">
   <form id="login-form" class="login-card" autocomplete="off">
     <span class="tag">FOUNDERS ONLY</span>
     <h2>Sign in</h2>
-    <p>Use your Club Ralley founder email. Access is gated on the <code>admin_emails</code> table.</p>
+    <p>Access is locked to the shared founder account. Only emails on the <code>admin_emails</code> table can read founder data.</p>
     <label>Email</label>
-    <input id="login-email" type="email" required autocomplete="username" />
+    <input id="login-email" type="email" required autocomplete="username" placeholder="team@clubralley.com" />
     <label>Password</label>
     <input id="login-password" type="password" required autocomplete="current-password" />
     <button class="primary" id="login-submit" type="submit">Sign in</button>
@@ -210,28 +206,32 @@
   </form>
 </div>
 
-<!-- Permission denied screen -->
+<!-- Denied -->
 <div id="denied" class="login-wrap" style="display:none">
   <div class="login-card">
     <span class="tag">ACCESS DENIED</span>
-    <h2>Founders only.</h2>
-    <p>This account isn't on <code>admin_emails</code>. Add your email in Supabase or sign out and try again.</p>
+    <h2>Not on the allowlist.</h2>
+    <p>Only <code>admin_emails</code> members can read founder data. Sign out and use the shared team account.</p>
     <button class="primary" id="denied-logout" type="button">Sign out</button>
   </div>
 </div>
 
-<!-- Main dashboard -->
+<!-- App -->
 <div id="app" class="wrap" style="display:none">
   <div class="topbar">
     <span class="tag">FOUNDER</span>
     <h1>Dashboard</h1>
     <div class="spacer"></div>
+    <button class="btn" id="refresh-btn" type="button">Refresh</button>
     <div class="who" id="who"></div>
     <button class="logout" id="logout-btn">Sign out</button>
   </div>
 
-  <div class="tabs">
+  <div class="tabs" id="tabs">
     <button class="tab active" data-tab="overview">Overview</button>
+    <button class="tab" data-tab="finances">Finances</button>
+    <button class="tab" data-tab="users">Users</button>
+    <button class="tab" data-tab="ralleys">Ralleys</button>
     <button class="tab" data-tab="clubs">Pending Clubs <span id="clubs-count"></span></button>
     <button class="tab" data-tab="reports">Reports <span id="reports-count"></span></button>
   </div>
@@ -240,46 +240,247 @@
   <section id="tab-overview">
     <div class="loading" id="overview-loading">Loading…</div>
     <div id="overview-content" style="display:none">
-      <div class="revenue">
-        <div class="label">This month gross</div>
-        <div class="big" id="revenue-month">$0.00</div>
-        <div class="row">
-          <div>
-            <div class="label">All-time gross</div>
-            <div class="val" id="revenue-all">$0.00</div>
-          </div>
-          <div>
-            <div class="label">Active subs</div>
-            <div class="val" id="active-subs">0</div>
-          </div>
+      <div class="grid-4">
+        <div class="kpi dark">
+          <div class="lbl">This month gross</div>
+          <div class="num" id="kpi-month">$0.00</div>
+          <div class="sub" id="kpi-month-sub">—</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">All-time gross</div>
+          <div class="num" id="kpi-alltime">$0.00</div>
+          <div class="sub">across all paid transactions</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Active subs</div>
+          <div class="num" id="kpi-subs">0</div>
+          <div class="sub" id="kpi-subs-sub">—</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Users · onboarded</div>
+          <div class="num" id="kpi-users">0</div>
+          <div class="sub" id="kpi-users-sub">—</div>
         </div>
       </div>
 
-      <div class="grid">
+      <div class="grid-2" style="margin-top: 16px">
         <div class="card">
-          <h2>Users · <span id="users-total">0</span> total</h2>
-          <div class="stat-row">
-            <div class="stat-cell"><div class="num" id="users-player">0</div><div class="lbl">Players</div></div>
-            <div class="stat-cell"><div class="num" id="users-captain">0</div><div class="lbl">Captains</div></div>
-            <div class="stat-cell"><div class="num" id="users-club">0</div><div class="lbl">Clubs</div></div>
-          </div>
+          <h2>Users by role</h2>
+          <div id="users-by-role"></div>
         </div>
-
         <div class="card">
           <h2>Activity</h2>
-          <div class="stat-row">
-            <div class="stat-cell"><div class="num" id="ralleys-total">0</div><div class="lbl">Ralleys</div></div>
-            <div class="stat-cell"><div class="num" id="ralleys-upcoming">0</div><div class="lbl">Upcoming</div></div>
-            <div class="stat-cell"><div class="num" id="rec-leagues-total">0</div><div class="lbl">Rec leagues</div></div>
-          </div>
+          <div id="activity-stats"></div>
         </div>
       </div>
 
-      <div class="section-title"><h3>Recent signups</h3><button class="csv" id="csv-signups">Export CSV</button></div>
+      <div class="section-title"><h3>Recent signups</h3><button class="btn" id="csv-signups">Export CSV</button></div>
       <div id="signups-list"></div>
 
-      <div class="section-title"><h3>Recent payments</h3><button class="csv" id="csv-payments">Export CSV</button></div>
+      <div class="section-title"><h3>Recent payments</h3><button class="btn" id="csv-payments">Export CSV</button></div>
       <div id="payments-list"></div>
+    </div>
+  </section>
+
+  <!-- Finances -->
+  <section id="tab-finances" style="display:none">
+    <div class="loading" id="fin-loading">Loading…</div>
+    <div id="fin-content" style="display:none">
+      <div class="grid-4">
+        <div class="kpi dark">
+          <div class="lbl">MRR (run-rate)</div>
+          <div class="num" id="fin-mrr">$0.00</div>
+          <div class="sub" id="fin-mrr-sub">—</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Gross this month</div>
+          <div class="num" id="fin-month">$0.00</div>
+          <div class="sub" id="fin-month-sub">—</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">Gross last 30 days</div>
+          <div class="num" id="fin-30">$0.00</div>
+          <div class="sub" id="fin-30-sub">—</div>
+        </div>
+        <div class="kpi">
+          <div class="lbl">All-time gross</div>
+          <div class="num" id="fin-all">$0.00</div>
+          <div class="sub" id="fin-all-sub">—</div>
+        </div>
+      </div>
+
+      <div class="grid-4" style="margin-top: 16px">
+        <div class="kpi"><div class="lbl">Platform fees</div><div class="num" id="fin-fees">$0.00</div><div class="sub">application_fee_cents on paid txns</div></div>
+        <div class="kpi"><div class="lbl">Net to captains/clubs</div><div class="num" id="fin-net">$0.00</div><div class="sub">gross − platform fees</div></div>
+        <div class="kpi"><div class="lbl">Refunded</div><div class="num" id="fin-refund">$0.00</div><div class="sub" id="fin-refund-sub">—</div></div>
+        <div class="kpi"><div class="lbl">Avg ticket</div><div class="num" id="fin-avg">$0.00</div><div class="sub" id="fin-avg-sub">—</div></div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 16px">
+        <div class="card">
+          <h2>Subscriptions by plan</h2>
+          <div id="fin-subs-by-plan"></div>
+        </div>
+        <div class="card">
+          <h2>Payments by status</h2>
+          <div id="fin-payments-by-status"></div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 16px">
+        <div class="card">
+          <h2>Revenue by kind</h2>
+          <div id="fin-by-kind"></div>
+        </div>
+        <div class="card">
+          <h2>Revenue last 12 months</h2>
+          <svg class="chart" id="fin-chart" viewBox="0 0 600 140" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+
+      <div class="section-title">
+        <h3>Top earners (captains / clubs by net received)</h3>
+      </div>
+      <div class="table-scroll">
+        <table class="tbl" id="fin-top-earners-tbl"><thead></thead><tbody></tbody></table>
+      </div>
+
+      <div class="section-title">
+        <h3>All payments</h3>
+        <div class="toolbar">
+          <select id="fin-filter-status">
+            <option value="all">All statuses</option>
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+            <option value="refunded">Refunded</option>
+            <option value="failed">Failed</option>
+          </select>
+          <select id="fin-filter-kind">
+            <option value="all">All kinds</option>
+            <option value="subscription">Subscription</option>
+            <option value="league_registration">League registration</option>
+            <option value="ralley_join">Ralley join</option>
+          </select>
+          <input class="search" id="fin-search" placeholder="Search payer name / username / email…" />
+          <button class="btn" id="csv-fin-payments">Export CSV</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="tbl" id="fin-payments-tbl"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Users -->
+  <section id="tab-users" style="display:none">
+    <div class="loading" id="usr-loading">Loading…</div>
+    <div id="usr-content" style="display:none">
+      <div class="grid-4">
+        <div class="kpi dark"><div class="lbl">Total signups</div><div class="num" id="usr-total">0</div><div class="sub" id="usr-total-sub">—</div></div>
+        <div class="kpi"><div class="lbl">Onboarded</div><div class="num" id="usr-onboarded">0</div><div class="sub" id="usr-onboarded-sub">—</div></div>
+        <div class="kpi"><div class="lbl">New last 7 days</div><div class="num" id="usr-7">0</div><div class="sub" id="usr-7-sub">—</div></div>
+        <div class="kpi"><div class="lbl">New last 30 days</div><div class="num" id="usr-30">0</div><div class="sub" id="usr-30-sub">—</div></div>
+      </div>
+
+      <div class="grid-3" style="margin-top: 16px">
+        <div class="card"><h2>By role</h2><div id="usr-by-role"></div></div>
+        <div class="card"><h2>Onboarding funnel</h2><div id="usr-funnel"></div></div>
+        <div class="card"><h2>Verification</h2><div id="usr-verified"></div></div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 16px">
+        <div class="card">
+          <h2>Signups last 30 days</h2>
+          <svg class="chart" id="usr-chart" viewBox="0 0 600 140" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="card">
+          <h2>Top cities</h2>
+          <div id="usr-by-city"></div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 16px">
+        <div class="card"><h2>Top sports</h2><div id="usr-by-sport"></div></div>
+        <div class="card"><h2>Top schools</h2><div id="usr-by-school"></div></div>
+      </div>
+
+      <div class="grid-3" style="margin-top: 16px">
+        <div class="card"><h2>Top hosts (most ralleys)</h2><div id="usr-top-hosts"></div></div>
+        <div class="card"><h2>Top posters</h2><div id="usr-top-posters"></div></div>
+        <div class="card"><h2>Most followed</h2><div id="usr-top-followed"></div></div>
+      </div>
+
+      <div class="section-title">
+        <h3>All users</h3>
+        <div class="toolbar">
+          <select id="usr-filter-role">
+            <option value="all">All roles</option>
+            <option value="player">Player</option>
+            <option value="captain">Captain</option>
+            <option value="club">Club</option>
+          </select>
+          <select id="usr-filter-onboard">
+            <option value="all">All</option>
+            <option value="yes">Onboarded</option>
+            <option value="no">Not yet onboarded</option>
+          </select>
+          <input class="search" id="usr-search" placeholder="Search name / username / email / city…" />
+          <button class="btn" id="csv-users">Export CSV</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="tbl" id="usr-tbl"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Ralleys -->
+  <section id="tab-ralleys" style="display:none">
+    <div class="loading" id="ral-loading">Loading…</div>
+    <div id="ral-content" style="display:none">
+      <div class="grid-4">
+        <div class="kpi dark"><div class="lbl">Total ralleys</div><div class="num" id="ral-total">0</div><div class="sub" id="ral-total-sub">—</div></div>
+        <div class="kpi"><div class="lbl">Upcoming</div><div class="num" id="ral-upcoming">0</div><div class="sub" id="ral-upcoming-sub">—</div></div>
+        <div class="kpi"><div class="lbl">This week</div><div class="num" id="ral-week">0</div><div class="sub" id="ral-week-sub">—</div></div>
+        <div class="kpi"><div class="lbl">Past 30 days</div><div class="num" id="ral-past30">0</div><div class="sub" id="ral-past30-sub">—</div></div>
+      </div>
+
+      <div class="grid-4" style="margin-top: 16px">
+        <div class="kpi"><div class="lbl">Total attendees</div><div class="num" id="ral-attendees">0</div><div class="sub" id="ral-attendees-sub">—</div></div>
+        <div class="kpi"><div class="lbl">Avg attendance</div><div class="num" id="ral-avg-attend">0</div><div class="sub">per ralley</div></div>
+        <div class="kpi"><div class="lbl">Avg fill rate</div><div class="num" id="ral-avg-fill">0%</div><div class="sub">attendees ÷ capacity</div></div>
+        <div class="kpi"><div class="lbl">Photos uploaded</div><div class="num" id="ral-photos">0</div><div class="sub">across all ralleys</div></div>
+      </div>
+
+      <div class="grid-3" style="margin-top: 16px">
+        <div class="card"><h2>By sport</h2><div id="ral-by-sport"></div></div>
+        <div class="card"><h2>By host role</h2><div id="ral-by-host-role"></div></div>
+        <div class="card"><h2>By visibility</h2><div id="ral-by-visibility"></div></div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 16px">
+        <div class="card"><h2>Top cities</h2><div id="ral-by-city"></div></div>
+        <div class="card"><h2>Ralleys created last 30 days</h2><svg class="chart" id="ral-chart" viewBox="0 0 600 140" preserveAspectRatio="none"></svg></div>
+      </div>
+
+      <div class="section-title">
+        <h3>All ralleys</h3>
+        <div class="toolbar">
+          <select id="ral-filter-when">
+            <option value="all">All</option>
+            <option value="upcoming">Upcoming</option>
+            <option value="past">Past</option>
+          </select>
+          <select id="ral-filter-sport">
+            <option value="all">All sports</option>
+          </select>
+          <input class="search" id="ral-search" placeholder="Search title / location / host…" />
+          <button class="btn" id="csv-ralleys">Export CSV</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="tbl" id="ral-tbl"><thead></thead><tbody></tbody></table>
+      </div>
     </div>
   </section>
 
@@ -310,6 +511,9 @@ const SUPABASE_URL = "https://adstqltezhqncfljoqth.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkc3RxbHRlemhxbmNmbGpvcXRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NjE3NTIsImV4cCI6MjA5MzIzNzc1Mn0.Miau9eMXTkPGySZwGh8z6_e3pwbWSeSFAaLp2breazs";
 const MAIN_APP_URL = "https://clubralley-theta.vercel.app";
 
+// Subscription plan → monthly price (cents). Used to compute MRR.
+const PLAN_PRICE_CENTS = { captain_monthly: 1000, club_monthly: 3000 };
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, storageKey: "ralley-founder-auth" },
 });
@@ -319,146 +523,592 @@ const show = (id) => { $(id).style.display = ""; };
 const hide = (id) => { $(id).style.display = "none"; };
 
 function fmtUSD(cents) {
-  const n = (cents ?? 0) / 100;
+  const n = (Number(cents) || 0) / 100;
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 }
+function fmtNum(n) { return new Intl.NumberFormat("en-US").format(Number(n) || 0); }
 function fmtDate(s) { return s ? new Date(s).toLocaleDateString() : ""; }
 function fmtDateTime(s) { return s ? new Date(s).toLocaleString() : ""; }
+function fmtPct(num, den) { if (!den) return "0%"; return Math.round((num / den) * 100) + "%"; }
+function todayIso() { return new Date().toISOString().slice(0, 10); }
+function daysAgoIso(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString(); }
+function startOfMonthIso() { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d.toISOString(); }
 
-let reportsCache = [];
-let reportsFilter = "open";
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
 
+// ===== Boot =====
 async function boot() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return showLogin();
-  await loadDashboard();
+  await loadAll();
 }
 
-function showLogin() {
-  hide("app"); hide("denied"); show("login");
-}
+function showLogin() { hide("app"); hide("denied"); show("login"); }
+function showDenied() { hide("app"); hide("login"); show("denied"); }
+function showApp() { hide("login"); hide("denied"); show("app"); }
 
-function showDenied() {
-  hide("app"); hide("login"); show("denied");
-}
-
-function showApp() {
-  hide("login"); hide("denied"); show("app");
-}
-
-// --- Login ---
 $("login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const btn = $("login-submit");
-  const err = $("login-err");
-  err.style.display = "none";
-  btn.disabled = true; btn.textContent = "Signing in…";
+  const btn = $("login-submit"); const err = $("login-err");
+  err.style.display = "none"; btn.disabled = true; btn.textContent = "Signing in…";
   const { error } = await supabase.auth.signInWithPassword({
     email: $("login-email").value.trim(),
     password: $("login-password").value,
   });
   btn.disabled = false; btn.textContent = "Sign in";
-  if (error) {
-    err.textContent = error.message;
-    err.style.display = "";
-    return;
-  }
-  await loadDashboard();
+  if (error) { err.textContent = error.message; err.style.display = ""; return; }
+  await loadAll();
 });
 
 $("denied-logout").addEventListener("click", logout);
 $("logout-btn").addEventListener("click", logout);
+$("refresh-btn").addEventListener("click", () => loadAll());
 
-async function logout() {
-  await supabase.auth.signOut();
-  showLogin();
-}
+async function logout() { await supabase.auth.signOut(); showLogin(); }
 
-// --- Dashboard ---
-async function loadDashboard() {
+async function loadAll() {
   showApp();
   const { data: { user } } = await supabase.auth.getUser();
   $("who").textContent = user?.email ?? "";
-  await Promise.all([loadOverview(), loadClubs(), loadReports()]);
+
+  // Pre-check that the caller is a founder before kicking off N queries.
+  const { data: amFounder, error: gateErr } = await supabase.rpc("is_founder");
+  if (gateErr || !amFounder) {
+    // is_founder() might not exist in older deploys — fall back to admin_emails read.
+    const { data: row } = await supabase.from("admin_emails").select("email").eq("email", user.email).maybeSingle();
+    if (!row) return showDenied();
+  }
+
+  await Promise.all([
+    loadOverview(), loadFinances(), loadUsers(), loadRalleys(),
+    loadPendingClubs(), loadReports(),
+  ]);
 }
 
+// ===== Shared data caches =====
+let CACHE = {
+  users: [], payments: [], subscriptions: [], ralleys: [],
+  attendees: [], photos: [], posts: [], follows: [],
+  sports: [], schools: [],
+};
+
+async function fetchAllPages(query) {
+  // PostgREST default limit is 1000; for safety page through in 1000-row chunks.
+  const PAGE = 1000;
+  let rows = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await query.range(from, from + PAGE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    rows = rows.concat(data);
+    if (data.length < PAGE) break;
+    from += PAGE;
+  }
+  return rows;
+}
+
+async function loadBackingData() {
+  try {
+    const [users, payments, subscriptions, ralleys, attendees, photos, posts, follows, sports, schools] =
+      await Promise.all([
+        fetchAllPages(supabase.from("users").select("id, auth_id, email, username, first_name, last_name, role, sport_id, school_id, city, hometown, photo_url, is_college_athlete, verified_at, onboarded_at, created_at").order("created_at", { ascending: false })),
+        fetchAllPages(supabase.from("payments").select("id, payer_user_id, receiver_user_id, kind, related_league_id, related_ralley_id, amount_cents, application_fee_cents, status, paid_at, created_at").order("created_at", { ascending: false })),
+        fetchAllPages(supabase.from("subscriptions").select("id, user_id, plan, status, current_period_end, created_at").order("created_at", { ascending: false })),
+        fetchAllPages(supabase.from("ralleys").select("id, host_id, title, sport_id, location_text, location_visibility, sport_restriction, level_restriction, starts_at, capacity, description, host_role, created_at").order("starts_at", { ascending: false })),
+        fetchAllPages(supabase.from("ralley_attendees").select("ralley_id, user_id, joined_at, checked_in_at")),
+        fetchAllPages(supabase.from("ralley_photos").select("id, ralley_id, uploader_id, created_at")),
+        fetchAllPages(supabase.from("posts").select("id, author_id, created_at")),
+        fetchAllPages(supabase.from("follows").select("follower_id, followee_id")),
+        fetchAllPages(supabase.from("sports").select("id, name").order("name")),
+        fetchAllPages(supabase.from("schools").select("id, name").order("name")),
+      ]);
+    CACHE = { users, payments, subscriptions, ralleys, attendees, photos, posts, follows, sports, schools };
+    return CACHE;
+  } catch (err) {
+    if ((err.message ?? "").includes("permission denied")) { showDenied(); throw err; }
+    throw err;
+  }
+}
+
+function userById(id) { return CACHE.users.find((u) => u.id === id); }
+function sportById(id) { return CACHE.sports.find((s) => s.id === id); }
+function schoolById(id) { return CACHE.schools.find((s) => s.id === id); }
+function userLabel(u) { if (!u) return "—"; return `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.username || u.email; }
+
+// ===== Overview =====
 async function loadOverview() {
-  const { data, error } = await supabase.rpc("founder_stats");
-  if (error) {
-    if (error.message?.includes("admin_emails") || error.code === "P0001" || error.code === "42501") {
-      showDenied();
-      return;
-    }
-    $("overview-loading").textContent = "Couldn't load stats: " + error.message;
-    return;
-  }
-  const s = data;
-  $("revenue-month").textContent = fmtUSD(s.revenue_month_cents);
-  $("revenue-all").textContent = fmtUSD(s.revenue_all_cents);
-  $("active-subs").textContent = String(s.subscriptions_active ?? 0);
-  $("users-total").textContent = String(s.users_total ?? 0);
-  $("users-player").textContent = String(s.users_player ?? 0);
-  $("users-captain").textContent = String(s.users_captain ?? 0);
-  $("users-club").textContent = String(s.users_club ?? 0);
-  $("ralleys-total").textContent = String(s.ralleys_total ?? 0);
-  $("ralleys-upcoming").textContent = String(s.ralleys_upcoming ?? 0);
-  $("rec-leagues-total").textContent = String(s.rec_leagues_total ?? 0);
+  await loadBackingData();
+  renderOverview();
+  renderFinances();
+  renderUsers();
+  renderRalleys();
+}
 
-  const sList = $("signups-list");
-  sList.innerHTML = "";
-  if (!s.recent_signups?.length) {
-    sList.innerHTML = `<div class="empty"><p>No completed signups yet.</p></div>`;
-  } else {
-    s.recent_signups.forEach((u) => {
-      const a = document.createElement(u.username ? "a" : "div");
-      a.className = "row-card";
-      if (u.username) {
-        a.href = `${MAIN_APP_URL}/u/${u.username}`;
-        a.target = "_blank"; a.rel = "noopener";
-        a.style.textDecoration = "none";
-      }
-      a.innerHTML = `
-        <div class="body">
-          <div class="name">${escapeHtml((u.first_name ?? "") + " " + (u.last_name ?? ""))} <span style="color:var(--muted); font-weight:400">@${escapeHtml(u.username ?? "—")}</span></div>
-          <div class="meta">${escapeHtml((u.role ?? "").toUpperCase())}${u.onboarded_at ? " · " + fmtDate(u.onboarded_at) : ""}</div>
-        </div>`;
-      sList.appendChild(a);
-    });
-  }
+function renderOverview() {
+  const paid = CACHE.payments.filter((p) => p.status === "paid");
+  const monthStart = startOfMonthIso();
+  const monthRev = paid.filter((p) => (p.paid_at ?? p.created_at) >= monthStart).reduce((a, p) => a + (p.amount_cents || 0), 0);
+  const allRev = paid.reduce((a, p) => a + (p.amount_cents || 0), 0);
+  const activeSubs = CACHE.subscriptions.filter((s) => s.status === "active");
+  const onboarded = CACHE.users.filter((u) => u.onboarded_at);
 
-  const pList = $("payments-list");
-  pList.innerHTML = "";
-  if (!s.recent_payments?.length) {
-    pList.innerHTML = `<div class="empty"><p>No payments yet.</p></div>`;
-  } else {
-    s.recent_payments.forEach((p) => {
-      const row = document.createElement("div");
-      row.className = "row-card";
-      row.innerHTML = `
-        <div class="body">
-          <div class="name">${escapeHtml((p.payer_first ?? "Someone") + " " + (p.payer_last ?? ""))}</div>
-          <div class="meta">${escapeHtml((p.kind ?? "").replace("_", " "))}${p.paid_at ? " · " + fmtDate(p.paid_at) : ""}</div>
-        </div>
-        <div class="amt">${fmtUSD(p.amount_cents)}</div>`;
-      pList.appendChild(row);
-    });
-  }
+  $("kpi-month").textContent = fmtUSD(monthRev);
+  $("kpi-month-sub").textContent = `${paid.filter((p) => (p.paid_at ?? p.created_at) >= monthStart).length} paid txns this month`;
+  $("kpi-alltime").textContent = fmtUSD(allRev);
+  $("kpi-subs").textContent = String(activeSubs.length);
+  $("kpi-subs-sub").textContent = `MRR ${fmtUSD(activeSubs.reduce((a, s) => a + (PLAN_PRICE_CENTS[s.plan] || 0), 0))}`;
+  $("kpi-users").textContent = `${fmtNum(CACHE.users.length)} · ${fmtNum(onboarded.length)}`;
+  $("kpi-users-sub").textContent = `${fmtPct(onboarded.length, CACHE.users.length)} onboarded`;
 
-  $("csv-signups").onclick = () => downloadCsv(`signups_${todayIso()}.csv`, s.recent_signups ?? []);
-  $("csv-payments").onclick = () => downloadCsv(`payments_${todayIso()}.csv`, s.recent_payments ?? []);
+  const byRole = groupCount(CACHE.users, (u) => u.role ?? "player");
+  $("users-by-role").innerHTML = renderBars(["player","captain","club"].map((k) => [k.toUpperCase(), byRole[k] || 0]));
+  $("activity-stats").innerHTML = renderBars([
+    ["Ralleys", CACHE.ralleys.length],
+    ["Upcoming", CACHE.ralleys.filter((r) => r.starts_at >= new Date().toISOString()).length],
+    ["Posts", CACHE.posts.length],
+    ["Photos", CACHE.photos.length],
+  ]);
+
+  // Recent lists (top 8 each)
+  const recentSignups = CACHE.users.slice(0, 8);
+  $("signups-list").innerHTML = recentSignups.map((u) => `
+    <a class="row-card" href="${MAIN_APP_URL}/u/${escapeHtml(u.username ?? "")}" target="_blank" rel="noopener" style="text-decoration:none">
+      <div class="body">
+        <div class="name">${escapeHtml(userLabel(u))} <span style="color:var(--muted); font-weight:400">@${escapeHtml(u.username ?? "—")}</span></div>
+        <div class="meta">${escapeHtml((u.role ?? "player").toUpperCase())} · ${fmtDate(u.created_at)}${u.city ? " · " + escapeHtml(u.city) : ""}</div>
+      </div>
+    </a>`).join("") || `<div class="empty"><p>No signups yet.</p></div>`;
+
+  const recentPayments = paid.slice(0, 8);
+  $("payments-list").innerHTML = recentPayments.map((p) => {
+    const u = userById(p.payer_user_id);
+    return `<div class="row-card">
+      <div class="body">
+        <div class="name">${escapeHtml(userLabel(u))}</div>
+        <div class="meta">${escapeHtml((p.kind ?? "").replace(/_/g, " "))} · ${fmtDate(p.paid_at ?? p.created_at)}</div>
+      </div>
+      <div class="amt">${fmtUSD(p.amount_cents)}</div>
+    </div>`;
+  }).join("") || `<div class="empty"><p>No payments yet.</p></div>`;
+
+  $("csv-signups").onclick = () => downloadCsv(`signups_${todayIso()}.csv`, recentSignups);
+  $("csv-payments").onclick = () => downloadCsv(`payments_${todayIso()}.csv`, recentPayments);
 
   hide("overview-loading"); show("overview-content");
 }
 
-async function loadClubs() {
+// ===== Finances =====
+function renderFinances() {
+  const paid = CACHE.payments.filter((p) => p.status === "paid");
+  const refunded = CACHE.payments.filter((p) => p.status === "refunded");
+  const monthStart = startOfMonthIso();
+  const since30 = daysAgoIso(30);
+  const monthRev = paid.filter((p) => (p.paid_at ?? p.created_at) >= monthStart).reduce((a, p) => a + p.amount_cents, 0);
+  const rev30 = paid.filter((p) => (p.paid_at ?? p.created_at) >= since30).reduce((a, p) => a + p.amount_cents, 0);
+  const allRev = paid.reduce((a, p) => a + p.amount_cents, 0);
+  const fees = paid.reduce((a, p) => a + (p.application_fee_cents || 0), 0);
+  const refundAmt = refunded.reduce((a, p) => a + p.amount_cents, 0);
+  const activeSubs = CACHE.subscriptions.filter((s) => s.status === "active");
+  const mrr = activeSubs.reduce((a, s) => a + (PLAN_PRICE_CENTS[s.plan] || 0), 0);
+
+  $("fin-mrr").textContent = fmtUSD(mrr);
+  $("fin-mrr-sub").textContent = `${activeSubs.length} active subscriptions`;
+  $("fin-month").textContent = fmtUSD(monthRev);
+  $("fin-month-sub").textContent = `${paid.filter((p) => (p.paid_at ?? p.created_at) >= monthStart).length} paid this month`;
+  $("fin-30").textContent = fmtUSD(rev30);
+  $("fin-30-sub").textContent = `${paid.filter((p) => (p.paid_at ?? p.created_at) >= since30).length} paid in 30d`;
+  $("fin-all").textContent = fmtUSD(allRev);
+  $("fin-all-sub").textContent = `${paid.length} paid all-time`;
+  $("fin-fees").textContent = fmtUSD(fees);
+  $("fin-net").textContent = fmtUSD(allRev - fees);
+  $("fin-refund").textContent = fmtUSD(refundAmt);
+  $("fin-refund-sub").textContent = `${refunded.length} refunded txn${refunded.length === 1 ? "" : "s"}`;
+  $("fin-avg").textContent = fmtUSD(paid.length ? Math.round(allRev / paid.length) : 0);
+  $("fin-avg-sub").textContent = "per paid transaction";
+
+  // Subs by plan
+  const subsByPlan = groupCount(CACHE.subscriptions, (s) => s.plan);
+  const subsByStatus = groupCount(CACHE.subscriptions, (s) => s.status);
+  $("fin-subs-by-plan").innerHTML = renderBars(
+    Object.entries(subsByPlan).map(([k, v]) => [labelPlan(k), v])
+  ) + renderBars(
+    Object.entries(subsByStatus).map(([k, v]) => [`status: ${k}`, v])
+  );
+
+  // Payments by status
+  const pmtByStatus = groupCount(CACHE.payments, (p) => p.status);
+  $("fin-payments-by-status").innerHTML = renderBars(
+    ["paid","pending","refunded","failed"].map((s) => [s.toUpperCase(), pmtByStatus[s] || 0])
+  );
+
+  // Revenue by kind
+  const byKind = {};
+  paid.forEach((p) => { byKind[p.kind] = (byKind[p.kind] || 0) + p.amount_cents; });
+  $("fin-by-kind").innerHTML = renderBars(
+    Object.entries(byKind).sort((a, b) => b[1] - a[1]).map(([k, v]) => [k.replace(/_/g, " "), v, fmtUSD(v)])
+  );
+
+  // Revenue last 12 months (bar chart)
+  drawMonthlyChart("fin-chart", paid);
+
+  // Top earners
+  const earned = {};
+  paid.filter((p) => p.receiver_user_id).forEach((p) => {
+    const net = (p.amount_cents || 0) - (p.application_fee_cents || 0);
+    earned[p.receiver_user_id] = (earned[p.receiver_user_id] || 0) + net;
+  });
+  const topEarners = Object.entries(earned).map(([uid, net]) => {
+    const u = userById(uid);
+    const count = paid.filter((p) => p.receiver_user_id === uid).length;
+    return { id: uid, name: userLabel(u), username: u?.username, role: u?.role ?? "—", net, count };
+  }).sort((a, b) => b.net - a.net).slice(0, 25);
+
+  renderTable("fin-top-earners-tbl", [
+    { key: "name", label: "Name", render: (r) => r.username ? `<a href="${MAIN_APP_URL}/u/${escapeHtml(r.username)}" target="_blank">${escapeHtml(r.name)}</a>` : escapeHtml(r.name) },
+    { key: "username", label: "@", render: (r) => r.username ? "@" + escapeHtml(r.username) : "—" },
+    { key: "role", label: "Role", render: (r) => `<span class="badge brand">${escapeHtml((r.role ?? "—").toUpperCase())}</span>` },
+    { key: "count", label: "Txns", num: true },
+    { key: "net", label: "Net received", num: true, render: (r) => fmtUSD(r.net) },
+  ], topEarners, "net", "desc");
+
+  // All payments table
+  const allRowsBase = CACHE.payments.map((p) => {
+    const payer = userById(p.payer_user_id);
+    const receiver = userById(p.receiver_user_id);
+    return {
+      ...p,
+      payer_name: userLabel(payer),
+      payer_username: payer?.username ?? "",
+      payer_email: payer?.email ?? "",
+      receiver_name: userLabel(receiver),
+    };
+  });
+
+  let finRows = allRowsBase.slice();
+  const filtStatus = $("fin-filter-status");
+  const filtKind = $("fin-filter-kind");
+  const search = $("fin-search");
+  function applyFinFilters() {
+    const s = filtStatus.value, k = filtKind.value, q = (search.value || "").toLowerCase();
+    finRows = allRowsBase.filter((r) =>
+      (s === "all" || r.status === s) &&
+      (k === "all" || r.kind === k) &&
+      (!q || (r.payer_name + " " + r.payer_username + " " + r.payer_email + " " + r.receiver_name).toLowerCase().includes(q))
+    );
+    renderTable("fin-payments-tbl", [
+      { key: "paid_at", label: "Date", render: (r) => fmtDateTime(r.paid_at ?? r.created_at) },
+      { key: "payer_name", label: "Payer", render: (r) => r.payer_username ? `<a href="${MAIN_APP_URL}/u/${escapeHtml(r.payer_username)}" target="_blank">${escapeHtml(r.payer_name)}</a>` : escapeHtml(r.payer_name) },
+      { key: "kind", label: "Kind", render: (r) => escapeHtml((r.kind ?? "").replace(/_/g, " ")) },
+      { key: "status", label: "Status", render: (r) => `<span class="badge ${statusBadge(r.status)}">${escapeHtml(r.status ?? "—")}</span>` },
+      { key: "amount_cents", label: "Amount", num: true, render: (r) => fmtUSD(r.amount_cents) },
+      { key: "application_fee_cents", label: "Fee", num: true, render: (r) => fmtUSD(r.application_fee_cents || 0) },
+      { key: "receiver_name", label: "Receiver", render: (r) => escapeHtml(r.receiver_name) },
+    ], finRows, "paid_at", "desc");
+  }
+  filtStatus.onchange = applyFinFilters;
+  filtKind.onchange = applyFinFilters;
+  search.oninput = applyFinFilters;
+  applyFinFilters();
+  $("csv-fin-payments").onclick = () => downloadCsv(`payments_${todayIso()}.csv`, finRows);
+
+  hide("fin-loading"); show("fin-content");
+}
+
+function labelPlan(p) {
+  if (p === "captain_monthly") return "Captain $10/mo";
+  if (p === "club_monthly") return "Club $30/mo";
+  return p;
+}
+function statusBadge(s) {
+  if (s === "paid") return "green";
+  if (s === "pending") return "amber";
+  if (s === "refunded") return "blue";
+  if (s === "failed") return "red";
+  return "muted";
+}
+
+// ===== Users =====
+function renderUsers() {
+  const us = CACHE.users;
+  const onboarded = us.filter((u) => u.onboarded_at);
+  const verified = us.filter((u) => u.verified_at);
+  const collegeAth = us.filter((u) => u.is_college_athlete);
+  const since7 = daysAgoIso(7);
+  const since30 = daysAgoIso(30);
+  const new7 = us.filter((u) => u.created_at >= since7).length;
+  const new30 = us.filter((u) => u.created_at >= since30).length;
+
+  $("usr-total").textContent = fmtNum(us.length);
+  $("usr-total-sub").textContent = `${fmtNum(onboarded.length)} onboarded · ${fmtPct(onboarded.length, us.length)}`;
+  $("usr-onboarded").textContent = fmtNum(onboarded.length);
+  $("usr-onboarded-sub").textContent = `${us.length - onboarded.length} not yet`;
+  $("usr-7").textContent = fmtNum(new7);
+  $("usr-7-sub").textContent = `${(new7 / 7).toFixed(1)} per day avg`;
+  $("usr-30").textContent = fmtNum(new30);
+  $("usr-30-sub").textContent = `${(new30 / 30).toFixed(1)} per day avg`;
+
+  const byRole = groupCount(us, (u) => u.role ?? "player");
+  $("usr-by-role").innerHTML = renderBars(["player","captain","club"].map((k) => [k.toUpperCase(), byRole[k] || 0]));
+
+  $("usr-funnel").innerHTML = renderBars([
+    ["Signed up", us.length],
+    ["Onboarded", onboarded.length],
+    ["Joined a ralley", new Set(CACHE.attendees.map((a) => a.user_id)).size],
+    ["Hosted a ralley", new Set(CACHE.ralleys.map((r) => r.host_id)).size],
+  ]);
+
+  $("usr-verified").innerHTML = renderBars([
+    ["College athletes", collegeAth.length],
+    ["Verified (badge)", verified.length],
+    ["Unverified", us.length - verified.length],
+  ]);
+
+  // Daily signup chart (last 30 days)
+  drawDailyChart("usr-chart", us.map((u) => u.created_at), 30);
+
+  // Top cities
+  const byCity = groupCount(us.filter((u) => u.city), (u) => u.city);
+  $("usr-by-city").innerHTML = renderBars(
+    Object.entries(byCity).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => [k, v])
+  ) || `<div class="empty"><p>No cities yet.</p></div>`;
+
+  // Top sports (via users.sport_id)
+  const bySport = {};
+  us.filter((u) => u.sport_id).forEach((u) => {
+    const s = sportById(u.sport_id); if (!s) return;
+    bySport[s.name] = (bySport[s.name] || 0) + 1;
+  });
+  $("usr-by-sport").innerHTML = renderBars(
+    Object.entries(bySport).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => [k, v])
+  ) || `<div class="empty"><p>No sports yet.</p></div>`;
+
+  // Top schools
+  const bySchool = {};
+  us.filter((u) => u.school_id).forEach((u) => {
+    const s = schoolById(u.school_id); if (!s) return;
+    bySchool[s.name] = (bySchool[s.name] || 0) + 1;
+  });
+  $("usr-by-school").innerHTML = renderBars(
+    Object.entries(bySchool).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => [k, v])
+  ) || `<div class="empty"><p>No schools yet.</p></div>`;
+
+  // Top hosts (ralleys hosted)
+  const hostCount = {};
+  CACHE.ralleys.forEach((r) => { hostCount[r.host_id] = (hostCount[r.host_id] || 0) + 1; });
+  $("usr-top-hosts").innerHTML = renderUserRanking(hostCount, "ralleys");
+
+  // Top posters
+  const postCount = {};
+  CACHE.posts.forEach((p) => { postCount[p.author_id] = (postCount[p.author_id] || 0) + 1; });
+  $("usr-top-posters").innerHTML = renderUserRanking(postCount, "posts");
+
+  // Most followed
+  const followCount = {};
+  CACHE.follows.forEach((f) => { followCount[f.followee_id] = (followCount[f.followee_id] || 0) + 1; });
+  $("usr-top-followed").innerHTML = renderUserRanking(followCount, "followers");
+
+  // Full users table
+  const rowsBase = us.map((u) => {
+    const sport = u.sport_id ? sportById(u.sport_id)?.name : "";
+    const school = u.school_id ? schoolById(u.school_id)?.name : "";
+    const ralleysHosted = hostCount[u.id] || 0;
+    const postsCount = postCount[u.id] || 0;
+    const followers = followCount[u.id] || 0;
+    return { ...u, name: userLabel(u), sport, school, ralleysHosted, postsCount, followers };
+  });
+
+  let usrRows = rowsBase.slice();
+  function applyUsrFilters() {
+    const r = $("usr-filter-role").value;
+    const o = $("usr-filter-onboard").value;
+    const q = ($("usr-search").value || "").toLowerCase();
+    usrRows = rowsBase.filter((u) =>
+      (r === "all" || (u.role ?? "player") === r) &&
+      (o === "all" || (o === "yes" ? !!u.onboarded_at : !u.onboarded_at)) &&
+      (!q || ((u.name + " " + (u.username ?? "") + " " + (u.email ?? "") + " " + (u.city ?? "") + " " + (u.hometown ?? "") + " " + sport + " " + school).toLowerCase().includes(q)))
+    );
+    renderTable("usr-tbl", [
+      { key: "name", label: "Name", render: (u) => u.username ? `<a href="${MAIN_APP_URL}/u/${escapeHtml(u.username)}" target="_blank">${escapeHtml(u.name)}</a>` : escapeHtml(u.name) },
+      { key: "username", label: "@", render: (u) => u.username ? "@" + escapeHtml(u.username) : "—" },
+      { key: "email", label: "Email", render: (u) => escapeHtml(u.email ?? "—") },
+      { key: "role", label: "Role", render: (u) => `<span class="badge brand">${escapeHtml((u.role ?? "player").toUpperCase())}</span>` },
+      { key: "city", label: "City", render: (u) => escapeHtml(u.city ?? "—") },
+      { key: "sport", label: "Sport", render: (u) => escapeHtml(u.sport ?? "—") },
+      { key: "school", label: "School", render: (u) => escapeHtml(u.school ?? "—") },
+      { key: "ralleysHosted", label: "Hosted", num: true },
+      { key: "postsCount", label: "Posts", num: true },
+      { key: "followers", label: "Followers", num: true },
+      { key: "onboarded_at", label: "Onboarded", render: (u) => u.onboarded_at ? fmtDate(u.onboarded_at) : `<span class="badge muted">no</span>` },
+      { key: "created_at", label: "Joined", render: (u) => fmtDate(u.created_at) },
+    ], usrRows, "created_at", "desc");
+  }
+  $("usr-filter-role").onchange = applyUsrFilters;
+  $("usr-filter-onboard").onchange = applyUsrFilters;
+  $("usr-search").oninput = applyUsrFilters;
+  applyUsrFilters();
+  $("csv-users").onclick = () => downloadCsv(`users_${todayIso()}.csv`, usrRows);
+
+  hide("usr-loading"); show("usr-content");
+}
+
+function renderUserRanking(countMap, suffix) {
+  const top = Object.entries(countMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (!top.length) return `<div class="empty"><p>None yet.</p></div>`;
+  return top.map(([uid, count]) => {
+    const u = userById(uid);
+    return `<a class="row-card" href="${MAIN_APP_URL}/u/${escapeHtml(u?.username ?? "")}" target="_blank" rel="noopener" style="text-decoration:none">
+      <div class="body">
+        <div class="name">${escapeHtml(userLabel(u))}</div>
+        <div class="meta">@${escapeHtml(u?.username ?? "—")}</div>
+      </div>
+      <div class="amt">${count} <span style="color:var(--muted); font-weight:400; font-size:11px">${suffix}</span></div>
+    </a>`;
+  }).join("");
+}
+
+// ===== Ralleys =====
+function renderRalleys() {
+  const now = new Date().toISOString();
+  const since7 = daysAgoIso(7);
+  const since30 = daysAgoIso(30);
+  const future7 = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString(); })();
+
+  const upcoming = CACHE.ralleys.filter((r) => r.starts_at >= now);
+  const thisWeek = upcoming.filter((r) => r.starts_at <= future7);
+  const past30 = CACHE.ralleys.filter((r) => r.starts_at < now && r.starts_at >= since30);
+
+  $("ral-total").textContent = fmtNum(CACHE.ralleys.length);
+  $("ral-total-sub").textContent = `${past30.length} held in last 30d`;
+  $("ral-upcoming").textContent = fmtNum(upcoming.length);
+  $("ral-upcoming-sub").textContent = `${upcoming.filter((r) => r.created_at >= since7).length} created last 7d`;
+  $("ral-week").textContent = fmtNum(thisWeek.length);
+  $("ral-week-sub").textContent = `in the next 7 days`;
+  $("ral-past30").textContent = fmtNum(past30.length);
+  $("ral-past30-sub").textContent = `held since ${fmtDate(since30)}`;
+
+  // Attendance metrics
+  const attendCount = {};
+  CACHE.attendees.forEach((a) => { attendCount[a.ralley_id] = (attendCount[a.ralley_id] || 0) + 1; });
+  const photoCount = {};
+  CACHE.photos.forEach((p) => { photoCount[p.ralley_id] = (photoCount[p.ralley_id] || 0) + 1; });
+
+  const totalAttendees = CACHE.attendees.length;
+  const avgAttendees = CACHE.ralleys.length ? totalAttendees / CACHE.ralleys.length : 0;
+  const totalCap = CACHE.ralleys.reduce((a, r) => a + (r.capacity || 0), 0);
+  const avgFill = totalCap ? totalAttendees / totalCap : 0;
+
+  $("ral-attendees").textContent = fmtNum(totalAttendees);
+  $("ral-attendees-sub").textContent = `${fmtNum(new Set(CACHE.attendees.map((a) => a.user_id)).size)} unique people`;
+  $("ral-avg-attend").textContent = avgAttendees.toFixed(1);
+  $("ral-avg-fill").textContent = Math.round(avgFill * 100) + "%";
+  $("ral-photos").textContent = fmtNum(CACHE.photos.length);
+
+  // By sport
+  const bySport = {};
+  CACHE.ralleys.forEach((r) => {
+    const name = sportById(r.sport_id)?.name ?? "Unknown";
+    bySport[name] = (bySport[name] || 0) + 1;
+  });
+  $("ral-by-sport").innerHTML = renderBars(
+    Object.entries(bySport).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => [k, v])
+  ) || `<div class="empty"><p>No ralleys yet.</p></div>`;
+
+  // By host role
+  const byHostRole = groupCount(CACHE.ralleys, (r) => r.host_role ?? "player");
+  $("ral-by-host-role").innerHTML = renderBars(["player","captain","club"].map((k) => [k.toUpperCase(), byHostRole[k] || 0]));
+
+  // By visibility
+  const byVis = groupCount(CACHE.ralleys, (r) => r.location_visibility ?? "—");
+  $("ral-by-visibility").innerHTML = renderBars(Object.entries(byVis).map(([k, v]) => [k.replace(/_/g, " "), v]));
+
+  // By city (parsed from location_text)
+  const byCity = {};
+  CACHE.ralleys.forEach((r) => {
+    const city = (r.location_text || "").split(",").slice(-2, -1)[0]?.trim() || (r.location_text || "").split(",").pop()?.trim() || "Unknown";
+    byCity[city] = (byCity[city] || 0) + 1;
+  });
+  $("ral-by-city").innerHTML = renderBars(
+    Object.entries(byCity).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, v]) => [k, v])
+  ) || `<div class="empty"><p>No locations yet.</p></div>`;
+
+  drawDailyChart("ral-chart", CACHE.ralleys.map((r) => r.created_at), 30);
+
+  // Sport filter options
+  const sportSel = $("ral-filter-sport");
+  while (sportSel.options.length > 1) sportSel.remove(1);
+  CACHE.sports.forEach((s) => {
+    const opt = document.createElement("option"); opt.value = s.id; opt.textContent = s.name; sportSel.appendChild(opt);
+  });
+
+  // Full table
+  const rowsBase = CACHE.ralleys.map((r) => {
+    const host = userById(r.host_id);
+    return {
+      ...r,
+      title: r.title ?? "—",
+      host_name: userLabel(host),
+      host_username: host?.username ?? "",
+      sport_name: sportById(r.sport_id)?.name ?? "—",
+      attendees: attendCount[r.id] || 0,
+      photos: photoCount[r.id] || 0,
+      fill_pct: r.capacity ? ((attendCount[r.id] || 0) / r.capacity) : 0,
+      when: r.starts_at >= now ? "upcoming" : "past",
+    };
+  });
+
+  let ralRows = rowsBase.slice();
+  function applyRalFilters() {
+    const w = $("ral-filter-when").value;
+    const s = $("ral-filter-sport").value;
+    const q = ($("ral-search").value || "").toLowerCase();
+    ralRows = rowsBase.filter((r) =>
+      (w === "all" || r.when === w) &&
+      (s === "all" || String(r.sport_id) === s) &&
+      (!q || ((r.title + " " + r.location_text + " " + r.host_name + " " + (r.host_username ?? "")).toLowerCase().includes(q)))
+    );
+    renderTable("ral-tbl", [
+      { key: "starts_at", label: "Starts", render: (r) => fmtDateTime(r.starts_at) },
+      { key: "title", label: "Title", render: (r) => `<a href="${MAIN_APP_URL}/pickup-game/${escapeHtml(r.id)}" target="_blank">${escapeHtml(r.title)}</a>` },
+      { key: "sport_name", label: "Sport" },
+      { key: "host_name", label: "Host", render: (r) => r.host_username ? `<a href="${MAIN_APP_URL}/u/${escapeHtml(r.host_username)}" target="_blank">${escapeHtml(r.host_name)}</a>` : escapeHtml(r.host_name) },
+      { key: "host_role", label: "Role", render: (r) => `<span class="badge ${r.host_role === "club" ? "blue" : r.host_role === "captain" ? "amber" : "muted"}">${escapeHtml((r.host_role ?? "player").toUpperCase())}</span>` },
+      { key: "location_text", label: "Location", render: (r) => escapeHtml(r.location_text ?? "—") },
+      { key: "capacity", label: "Cap", num: true },
+      { key: "attendees", label: "Joined", num: true },
+      { key: "fill_pct", label: "Fill", num: true, render: (r) => {
+        const pct = Math.round(r.fill_pct * 100);
+        const cls = pct >= 100 ? "full" : pct >= 75 ? "warn" : "";
+        return `<div style="display:flex; align-items:center; gap:6px"><div class="capbar ${cls}" style="width:60px"><div style="width:${Math.min(100, pct)}%"></div></div><span style="font-size:11px; color:var(--muted)">${pct}%</span></div>`;
+      } },
+      { key: "photos", label: "Photos", num: true },
+      { key: "when", label: "When", render: (r) => `<span class="badge ${r.when === "upcoming" ? "green" : "muted"}">${r.when}</span>` },
+    ], ralRows, "starts_at", "desc");
+  }
+  $("ral-filter-when").onchange = applyRalFilters;
+  $("ral-filter-sport").onchange = applyRalFilters;
+  $("ral-search").oninput = applyRalFilters;
+  applyRalFilters();
+  $("csv-ralleys").onclick = () => downloadCsv(`ralleys_${todayIso()}.csv`, ralRows.map((r) => ({
+    id: r.id, title: r.title, sport: r.sport_name, host: r.host_name, host_username: r.host_username,
+    starts_at: r.starts_at, capacity: r.capacity, attendees: r.attendees, fill_pct: Math.round(r.fill_pct * 100),
+    location: r.location_text, host_role: r.host_role, when: r.when,
+  })));
+
+  hide("ral-loading"); show("ral-content");
+}
+
+// ===== Pending Clubs (RPC, unchanged) =====
+async function loadPendingClubs() {
   const { data, error } = await supabase.rpc("pending_clubs");
   const container = $("clubs-content");
   const loading = $("clubs-loading");
   container.innerHTML = "";
-  if (error) {
-    loading.textContent = "Couldn't load pending clubs: " + error.message;
-    return;
-  }
+  if (error) { loading.innerHTML = `<div class="errbox">Couldn't load pending clubs: ${escapeHtml(error.message)}</div>`; return; }
   const items = data ?? [];
   $("clubs-count").textContent = items.length ? `· ${items.length}` : "";
   if (!items.length) {
@@ -486,34 +1136,34 @@ async function loadClubs() {
 $("tab-clubs").addEventListener("click", async (e) => {
   const btn = e.target.closest("button[data-action]");
   if (!btn) return;
-  const id = btn.dataset.id;
-  const action = btn.dataset.action;
-  const all = $("tab-clubs").querySelectorAll("button[data-action]");
-  all.forEach((b) => b.disabled = true);
+  const id = btn.dataset.id, action = btn.dataset.action;
+  $("tab-clubs").querySelectorAll("button[data-action]").forEach((b) => b.disabled = true);
   if (action === "approve") {
     const { error } = await supabase.rpc("approve_club", { target_user_id: id });
     if (error) alert("Couldn't approve: " + error.message);
   } else {
     if (!confirm("Decline this club? Their account drops back to Player. They can re-apply later.")) {
-      all.forEach((b) => b.disabled = false);
+      $("tab-clubs").querySelectorAll("button[data-action]").forEach((b) => b.disabled = false);
       return;
     }
     const { error } = await supabase.rpc("decline_club", { target_user_id: id });
     if (error) alert("Couldn't decline: " + error.message);
   }
-  show("clubs-loading");
-  hide("clubs-content");
-  await loadClubs();
+  show("clubs-loading"); hide("clubs-content");
+  await loadPendingClubs();
 });
+
+// ===== Reports =====
+let reportsCache = []; let reportsFilter = "open";
 
 async function loadReports() {
   const { data, error } = await supabase
     .from("reports")
     .select("id, reporter_id, target_kind, target_id, reason, note, status, created_at, reporter:users!reports_reporter_id_fkey(username)")
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(500);
   if (error) {
-    $("reports-loading").textContent = "Couldn't load reports: " + error.message;
+    $("reports-loading").innerHTML = `<div class="errbox">Couldn't load reports: ${escapeHtml(error.message)}</div>`;
     return;
   }
   reportsCache = (data ?? []).map((r) => ({
@@ -528,8 +1178,7 @@ async function loadReports() {
 
 function renderReports() {
   const filtered = reportsCache.filter((r) => reportsFilter === "all" || r.status === reportsFilter);
-  const c = $("reports-content");
-  c.innerHTML = "";
+  const c = $("reports-content"); c.innerHTML = "";
   if (!filtered.length) {
     c.innerHTML = `<div class="empty"><h3>${reportsFilter === "open" ? "Inbox is clean. Nice." : "No reports."}</h3><p>${reportsFilter === "open" ? "Nothing open right now." : "Nothing matches this filter."}</p></div>`;
     return;
@@ -540,7 +1189,7 @@ function renderReports() {
     const targetUrl = targetLink(r);
     div.innerHTML = `
       <div class="head">
-        <span class="badge ${r.status}">${r.status}</span>
+        <span class="badge ${reportBadge(r.status)}">${r.status}</span>
         <span class="ts">${fmtDateTime(r.created_at)}</span>
         <span class="kind">${r.target_kind}</span>
       </div>
@@ -548,7 +1197,7 @@ function renderReports() {
       ${r.note ? `<div class="note">${escapeHtml(r.note)}</div>` : ""}
       <div class="meta">Reporter @${escapeHtml(r.reporter?.username ?? "—")} → target ${escapeHtml(r.target_id.slice(0, 8))}…</div>
       <div class="actions">
-        ${targetUrl ? `<a class="open-btn" style="text-decoration:none; display:inline-block;" href="${targetUrl}" target="_blank" rel="noopener"><button class="open-btn">Open target</button></a>` : ""}
+        ${targetUrl ? `<a href="${targetUrl}" target="_blank" rel="noopener" style="text-decoration:none"><button class="open-btn">Open target</button></a>` : ""}
         ${r.status !== "actioned" ? `<button class="actioned-btn" data-id="${r.id}" data-status="actioned">Mark actioned</button>` : ""}
         ${r.status !== "dismissed" ? `<button class="ghost" data-id="${r.id}" data-status="dismissed">Dismiss</button>` : ""}
         ${r.status === "open" ? `<button class="ghost" data-id="${r.id}" data-status="reviewed">Mark reviewed</button>` : ""}
@@ -556,27 +1205,28 @@ function renderReports() {
     c.appendChild(div);
   });
 }
-
+function reportBadge(status) {
+  if (status === "open") return "red";
+  if (status === "reviewed") return "amber";
+  if (status === "dismissed") return "muted";
+  if (status === "actioned") return "brand";
+  return "muted";
+}
 function targetLink(r) {
   if (r.target_kind === "ralley") return `${MAIN_APP_URL}/pickup-game/${r.target_id}`;
   if (r.target_kind === "club") return `${MAIN_APP_URL}/club/${r.target_id}`;
-  return null; // user reports store user_id, not username — let founder look up via Supabase
+  return null;
 }
 
 $("reports-filter").addEventListener("click", (e) => {
-  const btn = e.target.closest("button[data-filter]");
-  if (!btn) return;
+  const btn = e.target.closest("button[data-filter]"); if (!btn) return;
   $("reports-filter").querySelectorAll("button").forEach((b) => b.classList.remove("active"));
-  btn.classList.add("active");
-  reportsFilter = btn.dataset.filter;
-  renderReports();
+  btn.classList.add("active"); reportsFilter = btn.dataset.filter; renderReports();
 });
 
 $("tab-reports").addEventListener("click", async (e) => {
-  const btn = e.target.closest("button[data-status]");
-  if (!btn) return;
-  const id = btn.dataset.id;
-  const status = btn.dataset.status;
+  const btn = e.target.closest("button[data-status]"); if (!btn) return;
+  const id = btn.dataset.id, status = btn.dataset.status;
   const { data: authData } = await supabase.auth.getUser();
   let me = null;
   if (authData.user) {
@@ -593,23 +1243,136 @@ $("tab-reports").addEventListener("click", async (e) => {
   renderReports();
 });
 
-// --- Tabs ---
+// ===== Tabs =====
 document.querySelectorAll(".tab").forEach((t) => {
   t.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
     t.classList.add("active");
-    ["overview", "clubs", "reports"].forEach((name) => {
+    ["overview","finances","users","ralleys","clubs","reports"].forEach((name) => {
       $(`tab-${name}`).style.display = name === t.dataset.tab ? "" : "none";
     });
   });
 });
 
-// --- CSV ---
+// ===== Helpers: aggregation + rendering =====
+function groupCount(items, keyFn) {
+  const m = {};
+  items.forEach((it) => { const k = keyFn(it); if (k == null) return; m[k] = (m[k] || 0) + 1; });
+  return m;
+}
+
+function renderBars(entries) {
+  // entries: [[label, value, optionalDisplayString]]
+  if (!entries.length) return "";
+  const max = Math.max(...entries.map((e) => e[1])) || 1;
+  return `<div style="display:flex; flex-direction:column; gap:8px">${
+    entries.map(([label, value, display]) => {
+      const w = Math.max(2, Math.round((value / max) * 100));
+      return `<div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text); margin-bottom:2px">
+          <span style="color:var(--muted)">${escapeHtml(label)}</span>
+          <span style="font-weight:700; color:var(--brand-dark)">${escapeHtml(display ?? fmtNum(value))}</span>
+        </div>
+        <div style="height:6px; background:var(--border); border-radius:3px; overflow:hidden">
+          <div style="height:100%; width:${w}%; background:var(--brand-dark)"></div>
+        </div>
+      </div>`;
+    }).join("")
+  }</div>`;
+}
+
+function drawMonthlyChart(svgId, paid) {
+  const svg = $(svgId); if (!svg) return;
+  const now = new Date();
+  const buckets = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    buckets.push({ key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: d.toLocaleString("en-US", { month: "short" }), cents: 0 });
+  }
+  paid.forEach((p) => {
+    const d = new Date(p.paid_at ?? p.created_at);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const b = buckets.find((x) => x.key === key);
+    if (b) b.cents += p.amount_cents || 0;
+  });
+  drawBars(svg, buckets.map((b) => b.cents), buckets.map((b) => b.label), (v) => fmtUSD(v));
+}
+function drawDailyChart(svgId, timestamps, days) {
+  const svg = $(svgId); if (!svg) return;
+  const now = new Date();
+  const buckets = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate() - i); d.setHours(0,0,0,0);
+    buckets.push({ ts: d.getTime(), label: d.getDate(), count: 0 });
+  }
+  const start = buckets[0].ts;
+  timestamps.forEach((s) => {
+    const t = new Date(s).getTime();
+    if (t < start) return;
+    const idx = Math.floor((t - start) / (24 * 60 * 60 * 1000));
+    if (buckets[idx]) buckets[idx].count += 1;
+  });
+  drawBars(svg, buckets.map((b) => b.count), buckets.map((b) => b.label), (v) => String(v));
+}
+function drawBars(svg, values, labels, formatTooltip) {
+  const W = 600, H = 140, padX = 6, padY = 22;
+  const max = Math.max(...values, 1);
+  const bw = (W - padX * 2) / values.length;
+  let inner = "";
+  values.forEach((v, i) => {
+    const h = (v / max) * (H - padY - 10);
+    const x = padX + i * bw;
+    const y = H - padY - h;
+    inner += `<rect class="bar" x="${x + 1}" y="${y}" width="${Math.max(1, bw - 2)}" height="${Math.max(1, h)}" rx="2"><title>${escapeHtml(String(labels[i]))}: ${escapeHtml(formatTooltip(v))}</title></rect>`;
+    if (i % Math.ceil(values.length / 12) === 0) {
+      inner += `<text class="axis" x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${escapeHtml(String(labels[i]))}</text>`;
+    }
+  });
+  svg.innerHTML = inner;
+}
+
+// ===== Generic sortable table =====
+const TABLE_STATE = {};
+function renderTable(tblId, cols, rows, defaultSortKey, defaultSortDir = "asc") {
+  TABLE_STATE[tblId] = TABLE_STATE[tblId] || { sortKey: defaultSortKey, sortDir: defaultSortDir };
+  const st = TABLE_STATE[tblId];
+  const tbl = $(tblId);
+  if (!tbl) return;
+  const thead = tbl.querySelector("thead");
+  const tbody = tbl.querySelector("tbody");
+  thead.innerHTML = `<tr>${cols.map((c) => `<th data-key="${c.key}" class="${st.sortKey === c.key ? "sorted-" + st.sortDir : ""}" style="text-align:${c.num ? "right" : "left"}">${escapeHtml(c.label)}</th>`).join("")}</tr>`;
+  thead.querySelectorAll("th").forEach((th) => {
+    th.addEventListener("click", () => {
+      const k = th.dataset.key;
+      if (st.sortKey === k) st.sortDir = st.sortDir === "asc" ? "desc" : "asc";
+      else { st.sortKey = k; st.sortDir = "asc"; }
+      renderTable(tblId, cols, rows, st.sortKey, st.sortDir);
+    });
+  });
+  const sorted = rows.slice().sort((a, b) => {
+    const av = a[st.sortKey]; const bv = b[st.sortKey];
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    let cmp;
+    if (typeof av === "number" && typeof bv === "number") cmp = av - bv;
+    else cmp = String(av).localeCompare(String(bv));
+    return st.sortDir === "asc" ? cmp : -cmp;
+  });
+  if (sorted.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${cols.length}" style="text-align:center; color:var(--muted); padding:24px">No rows.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = sorted.map((r) => `<tr>${cols.map((c) => `<td style="text-align:${c.num ? "right" : "left"}">${c.render ? c.render(r) : escapeHtml(String(r[c.key] ?? "—"))}</td>`).join("")}</tr>`).join("");
+}
+
+// ===== CSV =====
 function downloadCsv(filename, rows) {
   if (!rows.length) { alert("Nothing to export."); return; }
   const headers = Object.keys(rows[0]);
   const escape = (v) => {
     if (v == null) return "";
+    if (typeof v === "object") v = JSON.stringify(v);
     const s = String(v).replace(/"/g, '""');
     return /[",\n]/.test(s) ? `"${s}"` : s;
   };
@@ -620,14 +1383,6 @@ function downloadCsv(filename, rows) {
   a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
-}
-
-function todayIso() { return new Date().toISOString().slice(0, 10); }
-
-function escapeHtml(s) {
-  return String(s ?? "")
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
 boot();
