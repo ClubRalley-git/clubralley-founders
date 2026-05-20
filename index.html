@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<title>Club Ralley — Founder Dashboard</title>
+<link rel="icon" href="data:," />
+<style>
+  :root {
+    --brand-dark: #2C4F40;
+    --brand-light: #E2E4D6;
+    --bg: #fafaf7;
+    --card: #ffffff;
+    --text: #111;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --red: #dc2626;
+    --amber: #b45309;
+    --amber-bg: #FFF7E6;
+    --amber-border: #F5C97A;
+    --green: #15803d;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
+  }
+  a { color: var(--brand-dark); }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 24px 64px; }
+
+  /* Top bar */
+  .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .topbar .tag {
+    background: var(--brand-dark); color: #fff;
+    font-size: 11px; font-weight: 800; letter-spacing: 1.4px;
+    padding: 4px 10px; border-radius: 999px;
+  }
+  .topbar h1 { font-size: 22px; margin: 0; color: var(--brand-dark); letter-spacing: -0.4px; }
+  .topbar .spacer { flex: 1; }
+  .topbar .who { font-size: 12px; color: var(--muted); }
+  .topbar button.logout {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text); padding: 6px 10px; border-radius: 999px;
+    font-size: 12px; cursor: pointer;
+  }
+  .topbar button.logout:hover { background: #f3f4f6; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin-bottom: 22px; }
+  .tab {
+    padding: 10px 14px; cursor: pointer; font-size: 13px; font-weight: 700;
+    color: var(--muted); border: none; background: transparent;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .tab.active { color: var(--brand-dark); border-bottom-color: var(--brand-dark); }
+
+  /* Login screen */
+  .login-wrap {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .login-card {
+    width: 100%; max-width: 380px; background: #fff;
+    border: 1px solid var(--border); border-radius: 16px; padding: 28px;
+  }
+  .login-card .tag { display:inline-block; background: var(--brand-dark); color:#fff; font-size:11px; font-weight:800; letter-spacing:1.4px; padding:4px 10px; border-radius:999px; }
+  .login-card h2 { margin: 12px 0 6px; color: var(--brand-dark); font-size: 22px; }
+  .login-card p { margin: 0 0 18px; color: var(--muted); font-size: 13px; }
+  .login-card label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--brand-dark); margin: 10px 0 4px; }
+  .login-card input {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+    font-size: 14px; font-family: inherit;
+  }
+  .login-card input:focus { outline: none; border-color: var(--brand-dark); }
+  .login-card button.primary {
+    width: 100%; margin-top: 16px; padding: 12px;
+    background: var(--brand-dark); color: #fff; font-weight: 800;
+    border: none; border-radius: 10px; cursor: pointer; font-size: 14px;
+  }
+  .login-card button.primary[disabled] { opacity: 0.5; cursor: default; }
+  .login-card .err { color: var(--red); font-size: 12px; margin-top: 10px; }
+
+  /* Cards */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+  .card h2 { margin: 0 0 12px; font-size: 12px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--brand-dark); }
+
+  /* Revenue tile */
+  .revenue {
+    background: var(--brand-dark); color: #fff;
+    border-radius: 16px; padding: 22px; margin-bottom: 16px;
+  }
+  .revenue .label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; color: var(--brand-light); }
+  .revenue .big { font-size: 40px; font-weight: 800; margin-top: 4px; letter-spacing: -1px; }
+  .revenue .row { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.15); }
+  .revenue .row .label { opacity: 0.85; }
+  .revenue .row .val { color: #fff; font-size: 18px; font-weight: 800; margin-top: 2px; }
+
+  /* Users + Activity row */
+  .stat-row { display: flex; justify-content: space-between; margin-top: 6px; }
+  .stat-cell { flex: 1; text-align: center; }
+  .stat-cell .num { color: var(--brand-dark); font-size: 24px; font-weight: 800; }
+  .stat-cell .lbl { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-top: 2px; }
+
+  /* Nav cards (Reports, Pending Clubs) */
+  .nav-card {
+    display: flex; align-items: center; gap: 10px;
+    background: #fff; border: 1px solid var(--border); border-radius: 14px;
+    padding: 14px; cursor: pointer; transition: background 80ms;
+    margin-top: 12px;
+  }
+  .nav-card:hover { background: #f9f9f7; }
+  .nav-card.alert { background: var(--amber-bg); border-color: var(--amber-border); }
+  .nav-card .body { flex: 1; }
+  .nav-card .title { color: var(--brand-dark); font-weight: 800; font-size: 14px; }
+  .nav-card .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .nav-card .chev { color: var(--muted); font-size: 16px; }
+
+  /* List rows */
+  .section-title { display: flex; align-items: center; justify-content: space-between; margin: 24px 0 8px; }
+  .section-title h3 { margin: 0; color: var(--brand-dark); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; }
+  .section-title button.csv {
+    background: #fff; border: 1px solid var(--border);
+    padding: 6px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    color: var(--brand-dark); cursor: pointer;
+  }
+  .row-card {
+    display: flex; align-items: center; background: #fff;
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; margin-top: 6px;
+  }
+  .row-card .body { flex: 1; }
+  .row-card .name { color: #000; font-size: 13px; font-weight: 600; }
+  .row-card .meta { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .row-card .amt { color: var(--brand-dark); font-size: 14px; font-weight: 800; }
+
+  /* Pending clubs */
+  .club-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  .club-card .name { color: var(--brand-dark); font-size: 17px; font-weight: 800; }
+  .club-card .loc { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .club-card .about { color: #000; font-size: 13px; margin-top: 8px; }
+  .club-card .actions { display: flex; gap: 10px; margin-top: 12px; }
+  .club-card button {
+    flex: 1; padding: 10px; border-radius: 10px;
+    font-weight: 700; font-size: 14px; cursor: pointer;
+  }
+  .club-card .approve { background: var(--brand-dark); color: #fff; border: none; }
+  .club-card .decline { background: #fff; color: var(--red); border: 1.5px solid var(--red); }
+  .club-card button[disabled] { opacity: 0.5; cursor: default; }
+
+  /* Reports */
+  .filter-row { display: flex; gap: 6px; margin: 0 0 16px; flex-wrap: wrap; }
+  .filter-row button {
+    padding: 6px 12px; border-radius: 999px;
+    border: 1px solid var(--border); background: #fff;
+    color: var(--brand-dark); font-weight: 700; font-size: 11px; cursor: pointer;
+  }
+  .filter-row button.active { background: var(--brand-dark); color: #fff; border-color: var(--brand-dark); }
+  .report-card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 14px; margin-bottom: 8px; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    color: #fff; font-size: 10px; font-weight: 800; text-transform: uppercase;
+  }
+  .badge.open { background: var(--red); }
+  .badge.reviewed { background: #b58a00; }
+  .badge.dismissed { background: var(--muted); }
+  .badge.actioned { background: var(--brand-dark); }
+  .report-card .head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .report-card .ts { color: var(--muted); font-size: 11px; }
+  .report-card .kind { margin-left: auto; color: var(--brand-dark); font-size: 11px; font-weight: 800; text-transform: uppercase; }
+  .report-card .reason { color: #000; font-weight: 700; font-size: 14px; }
+  .report-card .note { color: #000; font-size: 13px; margin-top: 4px; }
+  .report-card .meta { color: var(--muted); font-size: 11px; margin-top: 4px; }
+  .report-card .actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .report-card .actions button {
+    padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; border: none;
+  }
+  .report-card .actions .open-btn { background: var(--brand-dark); color: #fff; }
+  .report-card .actions .actioned-btn { background: var(--red); color: #fff; }
+  .report-card .actions .ghost {
+    background: transparent; color: var(--brand-dark);
+    border: 1.5px solid var(--brand-dark);
+  }
+
+  .empty { text-align: center; padding: 60px 24px; }
+  .empty h3 { color: var(--brand-dark); font-size: 20px; margin: 0 0 6px; }
+  .empty p { color: var(--muted); font-size: 13px; margin: 0; }
+
+  .loading { display: flex; align-items: center; justify-content: center; padding: 60px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- Login screen -->
+<div id="login" class="login-wrap" style="display:none">
+  <form id="login-form" class="login-card" autocomplete="off">
+    <span class="tag">FOUNDERS ONLY</span>
+    <h2>Sign in</h2>
+    <p>Use your Club Ralley founder email. Access is gated on the <code>admin_emails</code> table.</p>
+    <label>Email</label>
+    <input id="login-email" type="email" required autocomplete="username" />
+    <label>Password</label>
+    <input id="login-password" type="password" required autocomplete="current-password" />
+    <button class="primary" id="login-submit" type="submit">Sign in</button>
+    <div id="login-err" class="err" style="display:none"></div>
+  </form>
+</div>
+
+<!-- Permission denied screen -->
+<div id="denied" class="login-wrap" style="display:none">
+  <div class="login-card">
+    <span class="tag">ACCESS DENIED</span>
+    <h2>Founders only.</h2>
+    <p>This account isn't on <code>admin_emails</code>. Add your email in Supabase or sign out and try again.</p>
+    <button class="primary" id="denied-logout" type="button">Sign out</button>
+  </div>
+</div>
+
+<!-- Main dashboard -->
+<div id="app" class="wrap" style="display:none">
+  <div class="topbar">
+    <span class="tag">FOUNDER</span>
+    <h1>Dashboard</h1>
+    <div class="spacer"></div>
+    <div class="who" id="who"></div>
+    <button class="logout" id="logout-btn">Sign out</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="overview">Overview</button>
+    <button class="tab" data-tab="clubs">Pending Clubs <span id="clubs-count"></span></button>
+    <button class="tab" data-tab="reports">Reports <span id="reports-count"></span></button>
+  </div>
+
+  <!-- Overview -->
+  <section id="tab-overview">
+    <div class="loading" id="overview-loading">Loading…</div>
+    <div id="overview-content" style="display:none">
+      <div class="revenue">
+        <div class="label">This month gross</div>
+        <div class="big" id="revenue-month">$0.00</div>
+        <div class="row">
+          <div>
+            <div class="label">All-time gross</div>
+            <div class="val" id="revenue-all">$0.00</div>
+          </div>
+          <div>
+            <div class="label">Active subs</div>
+            <div class="val" id="active-subs">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h2>Users · <span id="users-total">0</span> total</h2>
+          <div class="stat-row">
+            <div class="stat-cell"><div class="num" id="users-player">0</div><div class="lbl">Players</div></div>
+            <div class="stat-cell"><div class="num" id="users-captain">0</div><div class="lbl">Captains</div></div>
+            <div class="stat-cell"><div class="num" id="users-club">0</div><div class="lbl">Clubs</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Activity</h2>
+          <div class="stat-row">
+            <div class="stat-cell"><div class="num" id="ralleys-total">0</div><div class="lbl">Ralleys</div></div>
+            <div class="stat-cell"><div class="num" id="ralleys-upcoming">0</div><div class="lbl">Upcoming</div></div>
+            <div class="stat-cell"><div class="num" id="rec-leagues-total">0</div><div class="lbl">Rec leagues</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title"><h3>Recent signups</h3><button class="csv" id="csv-signups">Export CSV</button></div>
+      <div id="signups-list"></div>
+
+      <div class="section-title"><h3>Recent payments</h3><button class="csv" id="csv-payments">Export CSV</button></div>
+      <div id="payments-list"></div>
+    </div>
+  </section>
+
+  <!-- Pending Clubs -->
+  <section id="tab-clubs" style="display:none">
+    <div class="loading" id="clubs-loading">Loading…</div>
+    <div id="clubs-content" style="display:none"></div>
+  </section>
+
+  <!-- Reports -->
+  <section id="tab-reports" style="display:none">
+    <div class="filter-row" id="reports-filter">
+      <button class="active" data-filter="open">Open</button>
+      <button data-filter="reviewed">Reviewed</button>
+      <button data-filter="dismissed">Dismissed</button>
+      <button data-filter="actioned">Actioned</button>
+      <button data-filter="all">All</button>
+    </div>
+    <div class="loading" id="reports-loading">Loading…</div>
+    <div id="reports-content" style="display:none"></div>
+  </section>
+</div>
+
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const SUPABASE_URL = "https://adstqltezhqncfljoqth.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkc3RxbHRlemhxbmNmbGpvcXRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NjE3NTIsImV4cCI6MjA5MzIzNzc1Mn0.Miau9eMXTkPGySZwGh8z6_e3pwbWSeSFAaLp2breazs";
+const MAIN_APP_URL = "https://clubralley-theta.vercel.app";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, storageKey: "ralley-founder-auth" },
+});
+
+const $ = (id) => document.getElementById(id);
+const show = (id) => { $(id).style.display = ""; };
+const hide = (id) => { $(id).style.display = "none"; };
+
+function fmtUSD(cents) {
+  const n = (cents ?? 0) / 100;
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+}
+function fmtDate(s) { return s ? new Date(s).toLocaleDateString() : ""; }
+function fmtDateTime(s) { return s ? new Date(s).toLocaleString() : ""; }
+
+let reportsCache = [];
+let reportsFilter = "open";
+
+async function boot() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return showLogin();
+  await loadDashboard();
+}
+
+function showLogin() {
+  hide("app"); hide("denied"); show("login");
+}
+
+function showDenied() {
+  hide("app"); hide("login"); show("denied");
+}
+
+function showApp() {
+  hide("login"); hide("denied"); show("app");
+}
+
+// --- Login ---
+$("login-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = $("login-submit");
+  const err = $("login-err");
+  err.style.display = "none";
+  btn.disabled = true; btn.textContent = "Signing in…";
+  const { error } = await supabase.auth.signInWithPassword({
+    email: $("login-email").value.trim(),
+    password: $("login-password").value,
+  });
+  btn.disabled = false; btn.textContent = "Sign in";
+  if (error) {
+    err.textContent = error.message;
+    err.style.display = "";
+    return;
+  }
+  await loadDashboard();
+});
+
+$("denied-logout").addEventListener("click", logout);
+$("logout-btn").addEventListener("click", logout);
+
+async function logout() {
+  await supabase.auth.signOut();
+  showLogin();
+}
+
+// --- Dashboard ---
+async function loadDashboard() {
+  showApp();
+  const { data: { user } } = await supabase.auth.getUser();
+  $("who").textContent = user?.email ?? "";
+  await Promise.all([loadOverview(), loadClubs(), loadReports()]);
+}
+
+async function loadOverview() {
+  const { data, error } = await supabase.rpc("founder_stats");
+  if (error) {
+    if (error.message?.includes("admin_emails") || error.code === "P0001" || error.code === "42501") {
+      showDenied();
+      return;
+    }
+    $("overview-loading").textContent = "Couldn't load stats: " + error.message;
+    return;
+  }
+  const s = data;
+  $("revenue-month").textContent = fmtUSD(s.revenue_month_cents);
+  $("revenue-all").textContent = fmtUSD(s.revenue_all_cents);
+  $("active-subs").textContent = String(s.subscriptions_active ?? 0);
+  $("users-total").textContent = String(s.users_total ?? 0);
+  $("users-player").textContent = String(s.users_player ?? 0);
+  $("users-captain").textContent = String(s.users_captain ?? 0);
+  $("users-club").textContent = String(s.users_club ?? 0);
+  $("ralleys-total").textContent = String(s.ralleys_total ?? 0);
+  $("ralleys-upcoming").textContent = String(s.ralleys_upcoming ?? 0);
+  $("rec-leagues-total").textContent = String(s.rec_leagues_total ?? 0);
+
+  const sList = $("signups-list");
+  sList.innerHTML = "";
+  if (!s.recent_signups?.length) {
+    sList.innerHTML = `<div class="empty"><p>No completed signups yet.</p></div>`;
+  } else {
+    s.recent_signups.forEach((u) => {
+      const a = document.createElement(u.username ? "a" : "div");
+      a.className = "row-card";
+      if (u.username) {
+        a.href = `${MAIN_APP_URL}/u/${u.username}`;
+        a.target = "_blank"; a.rel = "noopener";
+        a.style.textDecoration = "none";
+      }
+      a.innerHTML = `
+        <div class="body">
+          <div class="name">${escapeHtml((u.first_name ?? "") + " " + (u.last_name ?? ""))} <span style="color:var(--muted); font-weight:400">@${escapeHtml(u.username ?? "—")}</span></div>
+          <div class="meta">${escapeHtml((u.role ?? "").toUpperCase())}${u.onboarded_at ? " · " + fmtDate(u.onboarded_at) : ""}</div>
+        </div>`;
+      sList.appendChild(a);
+    });
+  }
+
+  const pList = $("payments-list");
+  pList.innerHTML = "";
+  if (!s.recent_payments?.length) {
+    pList.innerHTML = `<div class="empty"><p>No payments yet.</p></div>`;
+  } else {
+    s.recent_payments.forEach((p) => {
+      const row = document.createElement("div");
+      row.className = "row-card";
+      row.innerHTML = `
+        <div class="body">
+          <div class="name">${escapeHtml((p.payer_first ?? "Someone") + " " + (p.payer_last ?? ""))}</div>
+          <div class="meta">${escapeHtml((p.kind ?? "").replace("_", " "))}${p.paid_at ? " · " + fmtDate(p.paid_at) : ""}</div>
+        </div>
+        <div class="amt">${fmtUSD(p.amount_cents)}</div>`;
+      pList.appendChild(row);
+    });
+  }
+
+  $("csv-signups").onclick = () => downloadCsv(`signups_${todayIso()}.csv`, s.recent_signups ?? []);
+  $("csv-payments").onclick = () => downloadCsv(`payments_${todayIso()}.csv`, s.recent_payments ?? []);
+
+  hide("overview-loading"); show("overview-content");
+}
+
+async function loadClubs() {
+  const { data, error } = await supabase.rpc("pending_clubs");
+  const container = $("clubs-content");
+  const loading = $("clubs-loading");
+  container.innerHTML = "";
+  if (error) {
+    loading.textContent = "Couldn't load pending clubs: " + error.message;
+    return;
+  }
+  const items = data ?? [];
+  $("clubs-count").textContent = items.length ? `· ${items.length}` : "";
+  if (!items.length) {
+    container.innerHTML = `<div class="empty"><h3>Nothing in the queue.</h3><p>New Club applications show up here for review.</p></div>`;
+  } else {
+    items.forEach((c) => {
+      const div = document.createElement("div");
+      div.className = "club-card";
+      const loc = [c.club_address, c.club_city, c.club_state].filter(Boolean).join(", ");
+      div.innerHTML = `
+        <div class="name">${escapeHtml(c.club_name ?? "Unnamed club")}</div>
+        <div class="loc">${escapeHtml(loc)}</div>
+        <div class="loc">Owner: ${escapeHtml(c.email ?? "—")}</div>
+        ${c.club_about ? `<div class="about">${escapeHtml(c.club_about)}</div>` : ""}
+        <div class="actions">
+          <button class="approve" data-id="${c.id}" data-action="approve">Approve</button>
+          <button class="decline" data-id="${c.id}" data-action="decline">Decline</button>
+        </div>`;
+      container.appendChild(div);
+    });
+  }
+  hide("clubs-loading"); show("clubs-content");
+}
+
+$("tab-clubs").addEventListener("click", async (e) => {
+  const btn = e.target.closest("button[data-action]");
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const action = btn.dataset.action;
+  const all = $("tab-clubs").querySelectorAll("button[data-action]");
+  all.forEach((b) => b.disabled = true);
+  if (action === "approve") {
+    const { error } = await supabase.rpc("approve_club", { target_user_id: id });
+    if (error) alert("Couldn't approve: " + error.message);
+  } else {
+    if (!confirm("Decline this club? Their account drops back to Player. They can re-apply later.")) {
+      all.forEach((b) => b.disabled = false);
+      return;
+    }
+    const { error } = await supabase.rpc("decline_club", { target_user_id: id });
+    if (error) alert("Couldn't decline: " + error.message);
+  }
+  show("clubs-loading");
+  hide("clubs-content");
+  await loadClubs();
+});
+
+async function loadReports() {
+  const { data, error } = await supabase
+    .from("reports")
+    .select("id, reporter_id, target_kind, target_id, reason, note, status, created_at, reporter:users!reports_reporter_id_fkey(username)")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) {
+    $("reports-loading").textContent = "Couldn't load reports: " + error.message;
+    return;
+  }
+  reportsCache = (data ?? []).map((r) => ({
+    ...r,
+    reporter: Array.isArray(r.reporter) ? (r.reporter[0] ?? null) : r.reporter,
+  }));
+  const openCount = reportsCache.filter((r) => r.status === "open").length;
+  $("reports-count").textContent = openCount ? `· ${openCount}` : "";
+  renderReports();
+  hide("reports-loading"); show("reports-content");
+}
+
+function renderReports() {
+  const filtered = reportsCache.filter((r) => reportsFilter === "all" || r.status === reportsFilter);
+  const c = $("reports-content");
+  c.innerHTML = "";
+  if (!filtered.length) {
+    c.innerHTML = `<div class="empty"><h3>${reportsFilter === "open" ? "Inbox is clean. Nice." : "No reports."}</h3><p>${reportsFilter === "open" ? "Nothing open right now." : "Nothing matches this filter."}</p></div>`;
+    return;
+  }
+  filtered.forEach((r) => {
+    const div = document.createElement("div");
+    div.className = "report-card";
+    const targetUrl = targetLink(r);
+    div.innerHTML = `
+      <div class="head">
+        <span class="badge ${r.status}">${r.status}</span>
+        <span class="ts">${fmtDateTime(r.created_at)}</span>
+        <span class="kind">${r.target_kind}</span>
+      </div>
+      <div class="reason">${escapeHtml(r.reason ?? "—")}</div>
+      ${r.note ? `<div class="note">${escapeHtml(r.note)}</div>` : ""}
+      <div class="meta">Reporter @${escapeHtml(r.reporter?.username ?? "—")} → target ${escapeHtml(r.target_id.slice(0, 8))}…</div>
+      <div class="actions">
+        ${targetUrl ? `<a class="open-btn" style="text-decoration:none; display:inline-block;" href="${targetUrl}" target="_blank" rel="noopener"><button class="open-btn">Open target</button></a>` : ""}
+        ${r.status !== "actioned" ? `<button class="actioned-btn" data-id="${r.id}" data-status="actioned">Mark actioned</button>` : ""}
+        ${r.status !== "dismissed" ? `<button class="ghost" data-id="${r.id}" data-status="dismissed">Dismiss</button>` : ""}
+        ${r.status === "open" ? `<button class="ghost" data-id="${r.id}" data-status="reviewed">Mark reviewed</button>` : ""}
+      </div>`;
+    c.appendChild(div);
+  });
+}
+
+function targetLink(r) {
+  if (r.target_kind === "ralley") return `${MAIN_APP_URL}/pickup-game/${r.target_id}`;
+  if (r.target_kind === "club") return `${MAIN_APP_URL}/club/${r.target_id}`;
+  return null; // user reports store user_id, not username — let founder look up via Supabase
+}
+
+$("reports-filter").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-filter]");
+  if (!btn) return;
+  $("reports-filter").querySelectorAll("button").forEach((b) => b.classList.remove("active"));
+  btn.classList.add("active");
+  reportsFilter = btn.dataset.filter;
+  renderReports();
+});
+
+$("tab-reports").addEventListener("click", async (e) => {
+  const btn = e.target.closest("button[data-status]");
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const status = btn.dataset.status;
+  const { data: authData } = await supabase.auth.getUser();
+  let me = null;
+  if (authData.user) {
+    const { data } = await supabase.from("users").select("id").eq("auth_id", authData.user.id).maybeSingle();
+    me = data?.id ?? null;
+  }
+  const { error } = await supabase.from("reports").update({
+    status, reviewed_at: new Date().toISOString(), reviewed_by: me,
+  }).eq("id", id);
+  if (error) { alert("Update failed: " + error.message); return; }
+  reportsCache = reportsCache.map((r) => r.id === id ? { ...r, status } : r);
+  const openCount = reportsCache.filter((r) => r.status === "open").length;
+  $("reports-count").textContent = openCount ? `· ${openCount}` : "";
+  renderReports();
+});
+
+// --- Tabs ---
+document.querySelectorAll(".tab").forEach((t) => {
+  t.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
+    t.classList.add("active");
+    ["overview", "clubs", "reports"].forEach((name) => {
+      $(`tab-${name}`).style.display = name === t.dataset.tab ? "" : "none";
+    });
+  });
+});
+
+// --- CSV ---
+function downloadCsv(filename, rows) {
+  if (!rows.length) { alert("Nothing to export."); return; }
+  const headers = Object.keys(rows[0]);
+  const escape = (v) => {
+    if (v == null) return "";
+    const s = String(v).replace(/"/g, '""');
+    return /[",\n]/.test(s) ? `"${s}"` : s;
+  };
+  const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h])).join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function todayIso() { return new Date().toISOString().slice(0, 10); }
+
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+boot();
+</script>
+</body>
+</html>
