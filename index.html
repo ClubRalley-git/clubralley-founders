@@ -583,8 +583,11 @@ async function loadAll() {
     if (!row) return showDenied();
   }
 
+  // loadOverview() loads the backing data once and renders overview,
+  // finances, users, and ralleys from it. Pending clubs and reports
+  // fetch their own data separately.
   await Promise.all([
-    loadOverview(), loadFinances(), loadUsers(), loadRalleys(),
+    loadOverview(),
     loadPendingClubs(), loadReports(),
   ]);
 }
