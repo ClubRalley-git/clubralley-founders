@@ -650,6 +650,10 @@ async function loadOverview() {
   renderFinances();
   renderUsers();
   renderRalleys();
+  // Reports load in parallel and often finish before the user cache is
+  // ready; re-render now that CACHE.users is populated so the reporter
+  // usernames resolve instead of showing "—".
+  if (reportsCache.length) renderReports();
 }
 
 function renderOverview() {
@@ -1160,19 +1164,21 @@ $("tab-clubs").addEventListener("click", async (e) => {
 let reportsCache = []; let reportsFilter = "open";
 
 async function loadReports() {
+  // No users embed here: the founder role can read the users table
+  // directly (that's how every other tab loads) but the reports→users
+  // FK join hits "permission denied for table users". Resolve the
+  // reporter's username from CACHE.users at render time instead, like
+  // the rest of the dashboard does via userById().
   const { data, error } = await supabase
     .from("reports")
-    .select("id, reporter_id, target_kind, target_id, reason, note, status, created_at, reporter:users!reports_reporter_id_fkey(username)")
+    .select("id, reporter_id, target_kind, target_id, reason, note, status, created_at")
     .order("created_at", { ascending: false })
     .limit(500);
   if (error) {
     $("reports-loading").innerHTML = `<div class="errbox">Couldn't load reports: ${escapeHtml(error.message)}</div>`;
     return;
   }
-  reportsCache = (data ?? []).map((r) => ({
-    ...r,
-    reporter: Array.isArray(r.reporter) ? (r.reporter[0] ?? null) : r.reporter,
-  }));
+  reportsCache = data ?? [];
   const openCount = reportsCache.filter((r) => r.status === "open").length;
   $("reports-count").textContent = openCount ? `· ${openCount}` : "";
   renderReports();
@@ -1198,7 +1204,7 @@ function renderReports() {
       </div>
       <div class="reason">${escapeHtml(r.reason ?? "—")}</div>
       ${r.note ? `<div class="note">${escapeHtml(r.note)}</div>` : ""}
-      <div class="meta">Reporter @${escapeHtml(r.reporter?.username ?? "—")} → target ${escapeHtml(r.target_id.slice(0, 8))}…</div>
+      <div class="meta">Reporter @${escapeHtml(userById(r.reporter_id)?.username ?? "—")} → target ${escapeHtml(r.target_id.slice(0, 8))}…</div>
       <div class="actions">
         ${targetUrl ? `<a href="${targetUrl}" target="_blank" rel="noopener" style="text-decoration:none"><button class="open-btn">Open target</button></a>` : ""}
         ${r.status !== "actioned" ? `<button class="actioned-btn" data-id="${r.id}" data-status="actioned">Mark actioned</button>` : ""}
