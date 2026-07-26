@@ -1125,13 +1125,24 @@ async function loadPendingClubs() {
       const div = document.createElement("div");
       div.className = "club-card";
       const loc = [c.club_address, c.club_city, c.club_state].filter(Boolean).join(", ");
+      // Two states now (migration 0059): a club awaiting review, and one
+      // already approved that hasn't paid yet — approving no longer makes a
+      // club live, paying does. Show which, and offer the matching action.
+      const awaiting = c.application_status === "awaiting_payment";
+      const badge = awaiting
+        ? `<span class="badge amber">AWAITING PAYMENT</span>`
+        : `<span class="badge blue">NEEDS REVIEW</span>`;
+      const contact = [c.contact_name, c.phone].filter(Boolean).join(" · ");
       div.innerHTML = `
-        <div class="name">${escapeHtml(c.club_name ?? "Unnamed club")}</div>
+        <div class="name">${escapeHtml(c.club_name ?? "Unnamed club")} ${badge}</div>
         <div class="loc">${escapeHtml(loc)}</div>
-        <div class="loc">Owner: ${escapeHtml(c.email ?? "—")}</div>
+        <div class="loc">Contact: ${escapeHtml(contact || "—")}</div>
+        <div class="loc">Email: ${escapeHtml(c.email ?? "—")}</div>
         ${c.club_about ? `<div class="about">${escapeHtml(c.club_about)}</div>` : ""}
         <div class="actions">
-          <button class="approve" data-id="${c.id}" data-action="approve">Approve</button>
+          ${awaiting
+            ? `<button class="approve" data-id="${c.id}" data-action="resend">Resend pay link</button>`
+            : `<button class="approve" data-id="${c.id}" data-action="approve">Approve &amp; send pay link</button>`}
           <button class="decline" data-id="${c.id}" data-action="decline">Decline</button>
         </div>`;
       container.appendChild(div);
@@ -1145,9 +1156,30 @@ $("tab-clubs").addEventListener("click", async (e) => {
   if (!btn) return;
   const id = btn.dataset.id, action = btn.dataset.action;
   $("tab-clubs").querySelectorAll("button[data-action]").forEach((b) => b.disabled = true);
-  if (action === "approve") {
-    const { error } = await supabase.rpc("approve_club", { target_user_id: id });
-    if (error) alert("Couldn't approve: " + error.message);
+  if (action === "approve" || action === "resend") {
+    // Approving no longer puts a club live (migration 0059) — it vets them
+    // and mints a pay token. The club goes live when Stripe confirms payment.
+    if (action === "approve") {
+      const { error } = await supabase.rpc("approve_club", { target_user_id: id });
+      if (error) {
+        alert("Couldn't approve: " + error.message);
+        show("clubs-loading"); hide("clubs-content");
+        await loadPendingClubs();
+        return;
+      }
+    }
+    // Email them the pay link. Kept as a separate step so a mail failure
+    // reports honestly instead of silently leaving an approved club waiting.
+    const { data: mail, error: mailErr } = await supabase.functions.invoke("send-club-pay-link", {
+      body: { club_id: id },
+    });
+    if (mailErr) {
+      alert("Approved, but the pay-link email failed to send: " + mailErr.message);
+    } else if (!mail?.ok) {
+      alert(mail?.error ?? "Approved, but the pay-link email didn't send.");
+    } else {
+      alert(`Pay link sent to ${mail.emailed_to}. They go live once they pay.`);
+    }
   } else {
     if (!confirm("Decline this club? Their account drops back to Player. They can re-apply later.")) {
       $("tab-clubs").querySelectorAll("button[data-action]").forEach((b) => b.disabled = false);
