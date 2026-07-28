@@ -1109,6 +1109,45 @@ function renderRalleys() {
   hide("ral-loading"); show("ral-content");
 }
 
+// Held between approving and the list reload, because loadPendingClubs()
+// wipes clubs-content and would destroy the banner if it rendered earlier.
+let pendingPayLink = null;
+
+// Shows a pay link you can actually copy, for when the email didn't send.
+// The club is already approved at this point — this is the manual path so
+// they aren't left waiting on an email that never arrives.
+function showPayLinkFallback(url, message) {
+  const container = $("clubs-content");
+  const box = document.createElement("div");
+  box.className = "club-card";
+  box.style.borderColor = "#f59e0b";
+  box.style.borderWidth = "2px";
+  box.innerHTML = `
+    <div class="name">Approved — but the email didn't send</div>
+    <div class="loc" style="margin-top:6px">${escapeHtml(message || "Send this club their pay link by hand.")}</div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <input readonly value="${escapeHtml(url)}"
+             style="flex:1;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:13px;background:#fff" />
+      <button class="approve" style="flex:0 0 auto;padding:10px 16px">Copy link</button>
+    </div>`;
+  const input = box.querySelector("input");
+  const copyBtn = box.querySelector("button");
+  copyBtn.addEventListener("click", async () => {
+    input.select();
+    try {
+      await navigator.clipboard.writeText(url);
+      copyBtn.textContent = "Copied";
+    } catch {
+      // Clipboard API needs a secure context / permission — the text is
+      // already selected, so Cmd-C works as the fallback.
+      copyBtn.textContent = "Press Cmd-C";
+    }
+    setTimeout(() => { copyBtn.textContent = "Copy link"; }, 2500);
+  });
+  container.prepend(box);
+  box.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
 // ===== Pending Clubs (RPC, unchanged) =====
 async function loadPendingClubs() {
   const { data, error } = await supabase.rpc("pending_clubs");
@@ -1176,7 +1215,15 @@ $("tab-clubs").addEventListener("click", async (e) => {
     if (mailErr) {
       alert("Approved, but the pay-link email failed to send: " + mailErr.message);
     } else if (!mail?.ok) {
-      alert(mail?.error ?? "Approved, but the pay-link email didn't send.");
+      // The club IS approved — only the email failed (Resend not configured
+      // yet, domain unverified, outage). The function hands back the pay link
+      // so the club isn't stranded; show it in something you can actually
+      // copy from, since you can't select text out of an alert() box.
+      const url = mail?.pay_url || (String(mail?.error ?? "").match(/https?:\/\/\S+/) || [])[0];
+      // Deferred until AFTER the reload below — loadPendingClubs() clears
+      // clubs-content, so rendering the banner here would wipe it instantly.
+      if (url) pendingPayLink = { url, message: mail?.error };
+      else alert(mail?.error ?? "Approved, but the pay-link email didn't send.");
     } else {
       alert(`Pay link sent to ${mail.emailed_to}. They go live once they pay.`);
     }
@@ -1190,6 +1237,10 @@ $("tab-clubs").addEventListener("click", async (e) => {
   }
   show("clubs-loading"); hide("clubs-content");
   await loadPendingClubs();
+  if (pendingPayLink) {
+    showPayLinkFallback(pendingPayLink.url, pendingPayLink.message);
+    pendingPayLink = null;
+  }
 });
 
 // ===== Reports =====
