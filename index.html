@@ -131,6 +131,9 @@
   .badge.green { background: var(--green); }
   .badge.red { background: var(--red); }
   .badge.amber { background: var(--amber); }
+  /* Stars are the content of a review, not decoration — sized to be read at
+     a glance down a long list. */
+  .stars { margin-left: auto; color: #F5C97A; font-size: 15px; letter-spacing: 1px; }
   .badge.muted { background: var(--muted); }
   .badge.brand { background: var(--brand-dark); }
   .badge.blue { background: var(--blue); }
@@ -235,6 +238,7 @@
     <button class="tab" data-tab="noshows">No-shows <span id="noshow-count"></span></button>
     <button class="tab" data-tab="clubs">Pending Clubs <span id="clubs-count"></span></button>
     <button class="tab" data-tab="reports">Reports <span id="reports-count"></span></button>
+    <button class="tab" data-tab="reviews">Reviews <span id="reviews-count"></span></button>
   </div>
 
   <!-- Overview -->
@@ -530,6 +534,23 @@
     <div class="loading" id="reports-loading">Loading…</div>
     <div id="reports-content" style="display:none"></div>
   </section>
+
+  <!-- Reviews. Two separate things people rate, deliberately side by side
+       (Ava, 2026-09-09): the Ralley/host rating in `ratings`, and "how is
+       Club Ralley doing" in `app_ratings`. Both are out of 5 and both carry
+       an optional comment. -->
+  <section id="tab-reviews" style="display:none">
+    <div class="kpis" id="reviews-kpis"></div>
+    <div class="filter-row" id="reviews-filter">
+      <button class="active" data-filter="all">All</button>
+      <button data-filter="ralley">Ralleys &amp; hosts</button>
+      <button data-filter="app">Club Ralley</button>
+      <button data-filter="comments">With a comment</button>
+      <button data-filter="low">3 stars or fewer</button>
+    </div>
+    <div class="loading" id="reviews-loading">Loading…</div>
+    <div id="reviews-content" style="display:none"></div>
+  </section>
 </div>
 
 <script type="module">
@@ -616,7 +637,7 @@ async function loadAll() {
   // fetch their own data separately.
   await Promise.all([
     loadOverview(),
-    loadPendingClubs(), loadReports(),
+    loadPendingClubs(), loadReports(), loadReviews(),
   ]);
 }
 
@@ -683,6 +704,9 @@ async function loadOverview() {
   // ready; re-render now that CACHE.users is populated so the reporter
   // usernames resolve instead of showing "—".
   if (reportsCache.length) renderReports();
+  // Same race for reviews — the rater's @handle comes from CACHE.users, so a
+  // list rendered before the cache lands shows "—" for everyone.
+  if (reviewsCache.length) renderReviews();
 }
 
 function renderOverview() {
@@ -1437,12 +1461,172 @@ $("tab-reports").addEventListener("click", async (e) => {
   renderReports();
 });
 
+// ===== Reviews =====
+// Two tables, one list. `ratings` is a player rating the Ralley they went to
+// (and so its host); `app_ratings` is the same person saying how Club Ralley
+// itself is doing. They answer different questions and are kept apart in the
+// data for that reason, but the thing a founder wants is "what are people
+// saying", so they are merged for display and tagged by which one they are.
+//
+// `ratings` is world-readable (0025), `app_ratings` is founder-read (0074).
+let reviewsCache = [];
+let reviewsFilter = "all";
+
+async function loadReviews() {
+  const [rall, rapp] = await Promise.all([
+    supabase
+      .from("ratings")
+      .select("id, rater_user_id, ratee_user_id, ralley_id, stars, comment, created_at")
+      .order("created_at", { ascending: false })
+      .limit(500),
+    supabase
+      .from("app_ratings")
+      .select("user_id, stars, comment, created_at, updated_at")
+      .order("updated_at", { ascending: false })
+      .limit(500),
+  ]);
+
+  // Say which half failed rather than a flat "couldn't load". One of these
+  // can come back empty because of RLS while the other is fine, and an empty
+  // list is indistinguishable from "nobody has reviewed anything yet".
+  const problems = [];
+  if (rall.error) problems.push(`Ralley ratings: ${rall.error.message}`);
+  if (rapp.error) problems.push(`Club Ralley ratings: ${rapp.error.message}`);
+  if (problems.length) {
+    $("reviews-loading").innerHTML =
+      `<div class="errbox">${escapeHtml(problems.join(" · "))}</div>`;
+    return;
+  }
+
+  reviewsCache = [
+    ...(rall.data ?? []).map((r) => ({
+      key: `ralley:${r.id}`,
+      type: "ralley",
+      raterId: r.rater_user_id,
+      subjectId: r.ratee_user_id,
+      ralleyId: r.ralley_id,
+      stars: r.stars,
+      comment: r.comment,
+      at: r.created_at,
+    })),
+    ...(rapp.data ?? []).map((r) => ({
+      key: `app:${r.user_id}`,
+      type: "app",
+      raterId: r.user_id,
+      subjectId: null,
+      ralleyId: null,
+      stars: r.stars,
+      comment: r.comment,
+      // One row per person, overwritten (0074) — so the date that means
+      // anything is when they last changed their mind, not when they first
+      // answered.
+      at: r.updated_at ?? r.created_at,
+    })),
+  ].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+
+  const withComment = reviewsCache.filter((r) => r.comment && r.comment.trim()).length;
+  $("reviews-count").textContent = withComment ? `· ${withComment}` : "";
+
+  renderReviewKpis();
+  renderReviews();
+  hide("reviews-loading"); show("reviews-content");
+}
+
+function avgStars(rows) {
+  if (!rows.length) return null;
+  return rows.reduce((s, r) => s + (r.stars || 0), 0) / rows.length;
+}
+
+function renderReviewKpis() {
+  const ralleys = reviewsCache.filter((r) => r.type === "ralley");
+  const app = reviewsCache.filter((r) => r.type === "app");
+  const aR = avgStars(ralleys);
+  const aA = avgStars(app);
+  $("reviews-kpis").innerHTML = `
+    <div class="kpi">
+      <div class="lbl">Ralleys &amp; hosts</div>
+      <div class="num">${aR === null ? "—" : aR.toFixed(2)}</div>
+      <div class="sub">${fmtNum(ralleys.length)} rating${ralleys.length === 1 ? "" : "s"}</div>
+    </div>
+    <div class="kpi">
+      <div class="lbl">Club Ralley itself</div>
+      <div class="num">${aA === null ? "—" : aA.toFixed(2)}</div>
+      <div class="sub">${fmtNum(app.length)} rating${app.length === 1 ? "" : "s"}</div>
+    </div>
+    <div class="kpi">
+      <div class="lbl">Wrote something</div>
+      <div class="num">${fmtNum(reviewsCache.filter((r) => r.comment && r.comment.trim()).length)}</div>
+      <div class="sub">of ${fmtNum(reviewsCache.length)} total</div>
+    </div>
+    <div class="kpi">
+      <div class="lbl">3 stars or fewer</div>
+      <div class="num">${fmtNum(reviewsCache.filter((r) => r.stars <= 3).length)}</div>
+      <div class="sub">worth reading first</div>
+    </div>`;
+}
+
+function starBar(n) {
+  const full = "★".repeat(n);
+  const empty = "☆".repeat(5 - n);
+  return `<span class="stars" title="${n} of 5">${full}${empty}</span>`;
+}
+
+function renderReviews() {
+  const filtered = reviewsCache.filter((r) => {
+    if (reviewsFilter === "all") return true;
+    if (reviewsFilter === "comments") return !!(r.comment && r.comment.trim());
+    if (reviewsFilter === "low") return r.stars <= 3;
+    return r.type === reviewsFilter;
+  });
+  const c = $("reviews-content"); c.innerHTML = "";
+  if (!filtered.length) {
+    c.innerHTML = `<div class="empty"><h3>Nothing here yet.</h3><p>${
+      reviewsFilter === "all"
+        ? "Reviews arrive from the day-after recap email."
+        : "Nothing matches this filter."
+    }</p></div>`;
+    return;
+  }
+  filtered.forEach((r) => {
+    const div = document.createElement("div");
+    div.className = "report-card";
+    const rater = userById(r.raterId);
+    const subject = r.subjectId ? userById(r.subjectId) : null;
+    div.innerHTML = `
+      <div class="head">
+        <span class="badge ${r.stars <= 3 ? "amber" : "brand"}">${r.type === "app" ? "Club Ralley" : "Ralley"}</span>
+        <span class="ts">${fmtDateTime(r.at)}</span>
+        ${starBar(r.stars)}
+      </div>
+      ${
+        r.comment && r.comment.trim()
+          ? `<div class="reason">${escapeHtml(r.comment)}</div>`
+          : `<div class="note" style="opacity:.6">No comment left.</div>`
+      }
+      <div class="meta">@${escapeHtml(rater?.username ?? "—")}${
+        subject ? ` → host @${escapeHtml(subject.username ?? "—")}` : ""
+      }</div>
+      ${
+        r.ralleyId
+          ? `<div class="actions"><a href="${MAIN_APP_URL}/pickup-game/${r.ralleyId}" target="_blank" rel="noopener" style="text-decoration:none"><button class="open-btn">Open Ralley</button></a></div>`
+          : ""
+      }`;
+    c.appendChild(div);
+  });
+}
+
+$("reviews-filter").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-filter]"); if (!btn) return;
+  $("reviews-filter").querySelectorAll("button").forEach((b) => b.classList.remove("active"));
+  btn.classList.add("active"); reviewsFilter = btn.dataset.filter; renderReviews();
+});
+
 // ===== Tabs =====
 document.querySelectorAll(".tab").forEach((t) => {
   t.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
     t.classList.add("active");
-    ["overview","finances","users","ralleys","noshows","clubs","reports"].forEach((name) => {
+    ["overview","finances","users","ralleys","noshows","clubs","reports","reviews"].forEach((name) => {
       $(`tab-${name}`).style.display = name === t.dataset.tab ? "" : "none";
     });
   });
