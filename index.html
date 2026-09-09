@@ -232,6 +232,7 @@
     <button class="tab" data-tab="finances">Finances</button>
     <button class="tab" data-tab="users">Users</button>
     <button class="tab" data-tab="ralleys">Ralleys</button>
+    <button class="tab" data-tab="noshows">No-shows <span id="noshow-count"></span></button>
     <button class="tab" data-tab="clubs">Pending Clubs <span id="clubs-count"></span></button>
     <button class="tab" data-tab="reports">Reports <span id="reports-count"></span></button>
   </div>
@@ -485,6 +486,33 @@
   </section>
 
   <!-- Pending Clubs -->
+  <!-- No-shows. Fed by ralley_attendees.attended, which a HOST sets by hand
+       after the Ralley. Three states, and unmarked is not absent: most
+       Ralleys never get a roll call, so only attended = false counts here.
+       Everything on this tab is scoped to the Ralleys that were actually
+       marked, or the rates are meaningless. -->
+  <section id="tab-noshows" style="display:none">
+    <div class="loading" id="noshow-loading">Loading…</div>
+    <div id="noshow-content" style="display:none">
+      <div class="grid-4">
+        <div class="kpi dark"><div class="lbl">No-shows recorded</div><div class="num" id="ns-total">0</div><div class="sub" id="ns-total-sub">—</div></div>
+        <div class="kpi"><div class="lbl">People involved</div><div class="num" id="ns-people">0</div><div class="sub" id="ns-people-sub">—</div></div>
+        <div class="kpi"><div class="lbl">No-show rate</div><div class="num" id="ns-rate">0%</div><div class="sub" id="ns-rate-sub">—</div></div>
+        <div class="kpi"><div class="lbl">Ralleys with a roll call</div><div class="num" id="ns-marked">0</div><div class="sub" id="ns-marked-sub">—</div></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2>Repeat no-shows</h2>
+        <div id="ns-people-table"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h2>Every no-show</h2>
+        <div id="ns-rows-table"></div>
+      </div>
+    </div>
+  </section>
+
   <section id="tab-clubs" style="display:none">
     <div class="loading" id="clubs-loading">Loading…</div>
     <div id="clubs-content" style="display:none"></div>
@@ -623,7 +651,7 @@ async function loadBackingData() {
         fetchAllPages(supabase.from("payments").select("id, payer_user_id, receiver_user_id, kind, related_league_id, related_ralley_id, amount_cents, application_fee_cents, status, paid_at, created_at").order("created_at", { ascending: false })),
         fetchAllPages(supabase.from("subscriptions").select("id, user_id, plan, status, current_period_end, created_at").order("created_at", { ascending: false })),
         fetchAllPages(supabase.from("ralleys").select("id, host_id, title, sport_id, location_text, location_visibility, sport_restriction, level_restriction, starts_at, capacity, description, host_role, created_at").order("starts_at", { ascending: false })),
-        fetchAllPages(supabase.from("ralley_attendees").select("ralley_id, user_id, joined_at, checked_in_at")),
+        fetchAllPages(supabase.from("ralley_attendees").select("ralley_id, user_id, joined_at, checked_in_at, attended, attendance_marked_at")),
         fetchAllPages(supabase.from("ralley_photos").select("id, ralley_id, uploader_id, created_at")),
         fetchAllPages(supabase.from("posts").select("id, author_id, created_at")),
         fetchAllPages(supabase.from("follows").select("follower_id, followee_id")),
@@ -650,6 +678,7 @@ async function loadOverview() {
   renderFinances();
   renderUsers();
   renderRalleys();
+  renderNoShows();
   // Reports load in parallel and often finish before the user cache is
   // ready; re-render now that CACHE.users is populated so the reporter
   // usernames resolve instead of showing "—".
@@ -979,6 +1008,79 @@ function renderUserRanking(countMap, suffix) {
 }
 
 // ===== Ralleys =====
+// No-shows. Everything here is scoped to Ralleys a host actually ran a roll
+// call on: an unmarked attendee is "nobody checked", not "they didn't come",
+// and dividing by all attendees would report a made-up rate that only ever
+// falls as the app grows.
+function renderNoShows() {
+  const ralleyById = {};
+  CACHE.ralleys.forEach((r) => { ralleyById[r.id] = r; });
+  const userById = {};
+  CACHE.users.forEach((u) => { userById[u.id] = u; });
+
+  const marked = CACHE.attendees.filter((a) => a.attended === true || a.attended === false);
+  const noShows = CACHE.attendees.filter((a) => a.attended === false);
+  const markedRalleyIds = new Set(marked.map((a) => a.ralley_id));
+
+  const badge = $("noshow-count");
+  if (badge) badge.textContent = noShows.length ? `(${noShows.length})` : "";
+
+  $("ns-total").textContent = fmtNum(noShows.length);
+  $("ns-total-sub").textContent = `out of ${fmtNum(marked.length)} marked sign-ups`;
+
+  const byUser = {};
+  noShows.forEach((a) => { byUser[a.user_id] = (byUser[a.user_id] || 0) + 1; });
+  const people = Object.entries(byUser).sort((a, b) => b[1] - a[1]);
+  $("ns-people").textContent = fmtNum(people.length);
+  $("ns-people-sub").textContent = `${people.filter(([, n]) => n > 1).length} more than once`;
+
+  const rate = marked.length ? noShows.length / marked.length : 0;
+  $("ns-rate").textContent = `${(rate * 100).toFixed(1)}%`;
+  $("ns-rate-sub").textContent = "of marked sign-ups";
+
+  $("ns-marked").textContent = fmtNum(markedRalleyIds.size);
+  $("ns-marked-sub").textContent = `of ${fmtNum(CACHE.ralleys.length)} ralleys`;
+
+  // Repeat offenders.
+  const peopleHtml = people.length
+    ? `<div class="table-scroll"><table><thead><tr>
+         <th>Person</th><th>No-shows</th><th>Sign-ups marked</th><th>Rate</th>
+       </tr></thead><tbody>` +
+      people.map(([uid, n]) => {
+        const u = userById[uid];
+        const mine = marked.filter((a) => a.user_id === uid).length;
+        return `<tr>
+          <td>${escapeHtml(u ? `${u.first_name} ${u.last_name} (@${u.username})` : uid)}</td>
+          <td>${fmtNum(n)}</td>
+          <td>${fmtNum(mine)}</td>
+          <td>${mine ? ((n / mine) * 100).toFixed(0) : 0}%</td>
+        </tr>`;
+      }).join("") +
+      `</tbody></table></div>`
+    : `<div class="empty"><h3>No no-shows recorded.</h3><p>Hosts mark who turned up from the Ralley page once it's over. Nothing here means nobody has been marked absent yet — not that attendance is perfect.</p></div>`;
+  $("ns-people-table").innerHTML = peopleHtml;
+
+  // Every individual no-show, newest Ralley first.
+  const rows = noShows
+    .map((a) => ({ a, r: ralleyById[a.ralley_id], u: userById[a.user_id] }))
+    .sort((x, y) => String(y.r?.starts_at ?? "").localeCompare(String(x.r?.starts_at ?? "")));
+  $("ns-rows-table").innerHTML = rows.length
+    ? `<div class="table-scroll"><table><thead><tr>
+         <th>Ralley</th><th>When</th><th>Person</th><th>Email</th><th>Marked</th>
+       </tr></thead><tbody>` +
+      rows.map(({ a, r, u }) => `<tr>
+        <td>${escapeHtml(r?.title ?? "—")}</td>
+        <td>${escapeHtml(fmtDate(r?.starts_at))}</td>
+        <td>${escapeHtml(u ? `${u.first_name} ${u.last_name} (@${u.username})` : a.user_id)}</td>
+        <td>${escapeHtml(u?.email ?? "—")}</td>
+        <td>${escapeHtml(fmtDateTime(a.attendance_marked_at))}</td>
+      </tr>`).join("") +
+      `</tbody></table></div>`
+    : "";
+
+  hide("noshow-loading"); show("noshow-content");
+}
+
 function renderRalleys() {
   const now = new Date().toISOString();
   const since7 = daysAgoIso(7);
@@ -1340,7 +1442,7 @@ document.querySelectorAll(".tab").forEach((t) => {
   t.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
     t.classList.add("active");
-    ["overview","finances","users","ralleys","clubs","reports"].forEach((name) => {
+    ["overview","finances","users","ralleys","noshows","clubs","reports"].forEach((name) => {
       $(`tab-${name}`).style.display = name === t.dataset.tab ? "" : "none";
     });
   });
