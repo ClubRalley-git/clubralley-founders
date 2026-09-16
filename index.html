@@ -668,7 +668,10 @@ async function loadBackingData() {
   try {
     const [users, payments, subscriptions, ralleys, attendees, photos, posts, follows, sports, schools] =
       await Promise.all([
-        fetchAllPages(supabase.from("users").select("id, auth_id, email, username, first_name, last_name, role, sport_id, school_id, city, hometown, photo_url, is_college_athlete, verified_at, onboarded_at, created_at").order("created_at", { ascending: false })),
+        // users.email is column-locked for every app role since clubralley
+        // migration 0096; founder_users() is a founder-gated RPC that returns
+        // the same columns, newest first.
+        fetchAllPages(supabase.rpc("founder_users")),
         fetchAllPages(supabase.from("payments").select("id, payer_user_id, receiver_user_id, kind, related_league_id, related_ralley_id, amount_cents, application_fee_cents, status, paid_at, created_at").order("created_at", { ascending: false })),
         fetchAllPages(supabase.from("subscriptions").select("id, user_id, plan, status, current_period_end, created_at").order("created_at", { ascending: false })),
         fetchAllPages(supabase.from("ralleys").select("id, host_id, title, sport_id, location_text, location_visibility, sport_restriction, level_restriction, starts_at, capacity, description, host_role, created_at").order("starts_at", { ascending: false })),
