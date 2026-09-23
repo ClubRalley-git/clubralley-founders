@@ -162,6 +162,19 @@
   .club-card .decline { background: #fff; color: var(--red); border: 1.5px solid var(--red); }
   .club-card button[disabled] { opacity: 0.5; cursor: default; }
 
+  /* Ambassadors (migration 0115 in the app repo). The red count on the tab
+     and the amber banner are the alert: they stay until "Mark all seen". */
+  .tab .redcount { display: inline-block; min-width: 18px; padding: 1px 7px; border-radius: 999px; background: var(--red); color: #fff; font-size: 11px; font-weight: 800; margin-left: 4px; }
+  .tab .redcount:empty { display: none; }
+  .amb-banner { display: flex; align-items: center; gap: 12px; background: var(--amber-bg); border: 1px solid var(--amber-border); border-radius: 12px; padding: 14px 16px; margin-bottom: 18px; }
+  .amb-banner .t { font-weight: 800; color: var(--amber); }
+  .amb-banner .s { font-size: 13px; color: #92400e; margin-top: 2px; }
+  .amb-banner .body { flex: 1; min-width: 0; }
+  .amb-banner button { border: none; background: var(--amber); color: #fff; border-radius: 999px; padding: 8px 14px; font-family: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+  .amb-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+  .amb-dot.unseen { background: var(--red); }
+  select.amb-status { padding: 5px 10px; border: 1px solid var(--border); border-radius: 999px; font-family: inherit; font-size: 12px; font-weight: 700; color: var(--brand-dark); background: #fff; cursor: pointer; }
+
   /* Reports */
   .filter-row { display: flex; gap: 6px; margin: 0 0 16px; flex-wrap: wrap; }
   .filter-row button { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); background: #fff; color: var(--brand-dark); font-weight: 700; font-size: 11px; cursor: pointer; }
@@ -237,6 +250,7 @@
     <button class="tab" data-tab="ralleys">Ralleys</button>
     <button class="tab" data-tab="noshows">No-shows <span id="noshow-count"></span></button>
     <button class="tab" data-tab="clubs">Pending Clubs <span id="clubs-count"></span></button>
+    <button class="tab" data-tab="ambassadors">Ambassadors<span class="redcount" id="amb-count"></span></button>
     <button class="tab" data-tab="reports">Reports <span id="reports-count"></span></button>
     <button class="tab" data-tab="reviews">Reviews <span id="reviews-count"></span></button>
   </div>
@@ -522,6 +536,28 @@
     <div id="clubs-content" style="display:none"></div>
   </section>
 
+  <!-- Ambassadors. One row per person who tapped "I'm interested" on
+       "Want to become the ambassador for <place>?" in the app, shown when
+       nobody else on Ralley lived within 25 miles of the place they picked.
+       Read through founder_ambassador_requests() (migration 0115), which
+       carries contact details the users table locks from everyone else. -->
+  <section id="tab-ambassadors" style="display:none">
+    <div class="loading" id="amb-loading">Loading…</div>
+    <div id="amb-content" style="display:none">
+      <div id="amb-banner"></div>
+      <div class="grid-4">
+        <div class="kpi dark"><div class="lbl">New</div><div class="num" id="amb-new">0</div></div>
+        <div class="kpi"><div class="lbl">Contacted</div><div class="num" id="amb-contacted">0</div></div>
+        <div class="kpi"><div class="lbl">Ambassadors</div><div class="num" id="amb-ambassadors">0</div></div>
+        <div class="kpi"><div class="lbl">Not now</div><div class="num" id="amb-notnow">0</div></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h2>Requests</h2>
+        <div id="amb-table"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- Reports -->
   <section id="tab-reports" style="display:none">
     <div class="filter-row" id="reports-filter">
@@ -637,7 +673,7 @@ async function loadAll() {
   // fetch their own data separately.
   await Promise.all([
     loadOverview(),
-    loadPendingClubs(), loadReports(), loadReviews(),
+    loadPendingClubs(), loadAmbassadors(), loadReports(), loadReviews(),
   ]);
 }
 
@@ -1372,6 +1408,118 @@ $("tab-clubs").addEventListener("click", async (e) => {
   }
 });
 
+// ===== Ambassadors (founder_ambassador_requests, migration 0115) =====
+let ambCache = [];
+const AMB_STATUSES = [
+  { value: "new", label: "New", badge: "amber" },
+  { value: "contacted", label: "Contacted", badge: "blue" },
+  { value: "ambassador", label: "Ambassador", badge: "green" },
+  { value: "not_now", label: "Not now", badge: "muted" },
+];
+
+function ambAgo(s) {
+  const mins = Math.round((Date.now() - new Date(s).getTime()) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs} hr ago`;
+  return new Date(s).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function ambName(r) {
+  const full = [r.first_name, r.last_name ? r.last_name.slice(0, 1) + "." : ""].filter(Boolean).join(" ");
+  return full || (r.username ? "@" + r.username : "Someone");
+}
+
+async function loadAmbassadors() {
+  const { data, error } = await supabase.rpc("founder_ambassador_requests");
+  if (error) {
+    $("amb-loading").innerHTML = `<div class="errbox">Couldn't load ambassador requests: ${escapeHtml(error.message)}</div>`;
+    return;
+  }
+  ambCache = data ?? [];
+  renderAmbassadors();
+  hide("amb-loading"); show("amb-content");
+}
+
+function renderAmbassadors() {
+  const unseen = ambCache.filter((r) => !r.seen_at);
+  $("amb-count").textContent = unseen.length ? String(unseen.length) : "";
+  const count = (st) => ambCache.filter((r) => r.status === st).length;
+  $("amb-new").textContent = count("new");
+  $("amb-contacted").textContent = count("contacted");
+  $("amb-ambassadors").textContent = count("ambassador");
+  $("amb-notnow").textContent = count("not_now");
+
+  const banner = $("amb-banner");
+  if (unseen.length) {
+    const who = unseen.slice(0, 3).map((r) => `${ambName(r)} in ${r.place_label}`);
+    const more = unseen.length > 3 ? ` and ${unseen.length - 3} more` : "";
+    banner.innerHTML = `
+      <div class="amb-banner">
+        <div class="body">
+          <div class="t">${unseen.length} new ambassador ${unseen.length === 1 ? "request" : "requests"}</div>
+          <div class="s">${escapeHtml(who.join(", ") + more)} tapped "I'm interested".</div>
+        </div>
+        <button id="amb-mark-seen">Mark all seen</button>
+      </div>`;
+  } else {
+    banner.innerHTML = "";
+  }
+
+  const t = $("amb-table");
+  if (!ambCache.length) {
+    t.innerHTML = `<div class="empty"><h3>No requests yet.</h3><p>When someone is the first on Ralley in their place and taps "I'm interested", they show up here.</p></div>`;
+    return;
+  }
+  const rows = ambCache.map((r) => {
+    const contact = [
+      r.email ? `<a href="mailto:${escapeHtml(r.email)}">${escapeHtml(r.email)}</a>` : "",
+      r.phone ? `<a href="tel:${escapeHtml(r.phone)}">${escapeHtml(r.phone)}</a>` : "",
+    ].filter(Boolean).join(" · ") || "—";
+    const opts = AMB_STATUSES.map((o) =>
+      `<option value="${o.value}"${o.value === r.status ? " selected" : ""}>${o.label}</option>`).join("");
+    const st = AMB_STATUSES.find((o) => o.value === r.status) ?? AMB_STATUSES[0];
+    return `<tr>
+      <td><span class="amb-dot${r.seen_at ? "" : " unseen"}"></span><a href="${MAIN_APP_URL}/u/${encodeURIComponent(r.username ?? "")}" target="_blank" rel="noopener">${escapeHtml(ambName(r))}</a></td>
+      <td>${escapeHtml(r.place_label)}</td>
+      <td style="text-align:right">${r.players_within_25 == null ? "—" : r.players_within_25}</td>
+      <td>${escapeHtml(ambAgo(r.created_at))}</td>
+      <td>${contact}</td>
+      <td><span class="badge ${st.badge}">${st.label}</span></td>
+      <td><select class="amb-status" data-id="${r.id}" aria-label="Change status for ${escapeHtml(ambName(r))}">${opts}</select></td>
+    </tr>`;
+  }).join("");
+  t.innerHTML = `<div class="table-scroll"><table class="tbl"><thead><tr>
+      <th>Name</th><th>Place</th><th style="text-align:right">Players within 25 mi</th><th>Asked</th><th>Contact</th><th>Status</th><th>Change</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+$("tab-ambassadors").addEventListener("click", async (e) => {
+  if (e.target.id !== "amb-mark-seen") return;
+  e.target.disabled = true;
+  const ids = ambCache.filter((r) => !r.seen_at).map((r) => r.id);
+  const { error } = await supabase
+    .from("ambassador_requests")
+    .update({ seen_at: new Date().toISOString() })
+    .in("id", ids);
+  if (error) alert("Couldn't mark them seen: " + error.message);
+  await loadAmbassadors();
+});
+
+$("tab-ambassadors").addEventListener("change", async (e) => {
+  const sel = e.target.closest("select.amb-status");
+  if (!sel) return;
+  sel.disabled = true;
+  // Changing a status counts as having seen it.
+  const row = ambCache.find((r) => r.id === sel.dataset.id);
+  const patch = { status: sel.value };
+  if (row && !row.seen_at) patch.seen_at = new Date().toISOString();
+  const { error } = await supabase.from("ambassador_requests").update(patch).eq("id", sel.dataset.id);
+  if (error) alert("Couldn't change the status: " + error.message);
+  await loadAmbassadors();
+});
+
 // ===== Reports =====
 let reportsCache = []; let reportsFilter = "open";
 
@@ -1629,7 +1777,7 @@ document.querySelectorAll(".tab").forEach((t) => {
   t.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
     t.classList.add("active");
-    ["overview","finances","users","ralleys","noshows","clubs","reports","reviews"].forEach((name) => {
+    ["overview","finances","users","ralleys","noshows","clubs","ambassadors","reports","reviews"].forEach((name) => {
       $(`tab-${name}`).style.display = name === t.dataset.tab ? "" : "none";
     });
   });
