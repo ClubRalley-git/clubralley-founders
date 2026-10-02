@@ -143,6 +143,7 @@
   .bar { fill: var(--brand-dark); }
   .bar:hover { fill: #1d3329; }
   .axis { font-size: 9px; fill: var(--muted); }
+  .val { font-size: 8px; font-weight: 700; fill: var(--brand-dark); }
 
   /* List rows */
   .row-card { display: flex; align-items: center; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-top: 6px; gap: 10px; }
@@ -1824,7 +1825,10 @@ function drawMonthlyChart(svgId, paid) {
     const b = buckets.find((x) => x.key === key);
     if (b) b.cents += p.amount_cents || 0;
   });
-  drawBars(svg, buckets.map((b) => b.cents), buckets.map((b) => b.label), (v) => fmtUSD(v));
+  drawBars(svg, buckets.map((b) => b.cents), buckets.map((b) => b.label), (v) => fmtUSD(v), (v) => {
+    const d = v / 100;
+    return d >= 1000 ? "$" + (d / 1000).toFixed(1).replace(/\.0$/, "") + "k" : "$" + Math.round(d);
+  });
 }
 function drawDailyChart(svgId, timestamps, days) {
   const svg = $(svgId); if (!svg) return;
@@ -1843,16 +1847,19 @@ function drawDailyChart(svgId, timestamps, days) {
   });
   drawBars(svg, buckets.map((b) => b.count), buckets.map((b) => b.label), (v) => String(v));
 }
-function drawBars(svg, values, labels, formatTooltip) {
+function drawBars(svg, values, labels, formatTooltip, formatValue = (v) => String(v)) {
   const W = 600, H = 140, padX = 6, padY = 22;
   const max = Math.max(...values, 1);
   const bw = (W - padX * 2) / values.length;
   let inner = "";
   values.forEach((v, i) => {
-    const h = (v / max) * (H - padY - 10);
+    const h = (v / max) * (H - padY - 14);
     const x = padX + i * bw;
     const y = H - padY - h;
     inner += `<rect class="bar" x="${x + 1}" y="${y}" width="${Math.max(1, bw - 2)}" height="${Math.max(1, h)}" rx="2"><title>${escapeHtml(String(labels[i]))}: ${escapeHtml(formatTooltip(v))}</title></rect>`;
+    if (v > 0) {
+      inner += `<text class="val" x="${x + bw / 2}" y="${y - 3}" text-anchor="middle">${escapeHtml(formatValue(v))}</text>`;
+    }
     if (i % Math.ceil(values.length / 12) === 0) {
       inner += `<text class="axis" x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${escapeHtml(String(labels[i]))}</text>`;
     }
