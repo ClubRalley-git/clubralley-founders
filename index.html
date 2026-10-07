@@ -1952,6 +1952,7 @@ function openRoster(ralleyId) {
     return {
       first_name: u?.first_name ?? "", last_name: u?.last_name ?? "",
       username: u?.username ?? "", email: u?.email ?? "",
+      school: u?.school_id ? (schoolById(u.school_id)?.name ?? "") : "",
       type: a.user_id === r.host_id ? "Host" : "App",
       signed_up_at: a.joined_at,
       paid: paidBy.has("u:" + a.user_id) ? "Yes" : "",
@@ -1959,20 +1960,23 @@ function openRoster(ralleyId) {
     };
   });
   const guests = (CACHE.guests || []).filter((g) => g.ralley_id === ralleyId).map((g) => ({
-    first_name: g.first_name, last_name: g.last_name, username: "", email: g.email,
+    first_name: g.first_name, last_name: g.last_name, username: "", email: g.email, school: "",
     type: "Guest (no account)", signed_up_at: g.created_at,
     paid: paidBy.has("g:" + g.id) ? "Yes" : "", attended: "",
   }));
-  const rows = players.concat(guests);
+  const rows = players.concat(guests).map((x) => ({ ...x, bucknell: bucknellOf(x) }));
+  const nBucknell = rows.filter((x) => x.bucknell === "Yes").length;
 
   $("roster-title").textContent = `${r.title ?? "Ralley"} — ${rows.length} signed up`;
   $("roster-sub").textContent = `${fmtDateTime(r.starts_at)} · ${players.length} in the app · ` +
-    (CACHE.guests === null ? "no-account sign-ups could not be loaded" : `${guests.length} without an account`);
+    (CACHE.guests === null ? "no-account sign-ups could not be loaded" : `${guests.length} without an account`) +
+    ` · ${nBucknell} Bucknell (school on their profile, or a bucknell.edu email)`;
   renderTable("roster-tbl", [
     { key: "last_name", label: "Name", render: (x) => escapeHtml(`${x.first_name} ${x.last_name}`.trim() || x.username || "—") },
     { key: "username", label: "Username", render: (x) => x.username ? `<a href="${MAIN_APP_URL}/u/${escapeHtml(x.username)}" target="_blank">@${escapeHtml(x.username)}</a>` : "—" },
     { key: "email", label: "Email" },
     { key: "type", label: "Type" },
+    { key: "bucknell", label: "Bucknell", render: (x) => `<span class="badge ${x.bucknell === "Yes" ? "green" : "muted"}">${escapeHtml(x.bucknell)}</span>` },
     { key: "signed_up_at", label: "Signed up", render: (x) => escapeHtml(fmtDateTime(x.signed_up_at)) },
     { key: "paid", label: "Paid" },
     { key: "attended", label: "Showed up" },
@@ -1985,6 +1989,16 @@ function openRoster(ralleyId) {
 $("roster-close").onclick = () => $("roster-overlay").classList.add("hidden");
 $("roster-overlay").onclick = (e) => { if (e.target.id === "roster-overlay") $("roster-overlay").classList.add("hidden"); };
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("roster-overlay").classList.add("hidden"); });
+
+// Yes = Bucknell on their profile or a bucknell.edu email. No = their
+// profile names another school. Can't tell = no school and a non-Bucknell
+// email (every no-account guest without a bucknell.edu address lands here;
+// a student signing up with Gmail is not "not Bucknell").
+function bucknellOf(x) {
+  if (/bucknell/i.test(x.school || "") || /@bucknell\.edu$/i.test(x.email || "")) return "Yes";
+  if (x.school) return "No";
+  return "Can't tell";
+}
 
 // ===== CSV =====
 function downloadCsv(filename, rows) {
