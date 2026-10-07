@@ -126,6 +126,16 @@
   .btn.primary { background: var(--brand-dark); color: #fff; border-color: var(--brand-dark); }
   .btn.danger { background: var(--red); color: #fff; border-color: var(--red); }
 
+  /* Who signed up for one Ralley (click the Joined number) */
+  button.roster-link { background: none; border: none; padding: 0; font: inherit; font-weight: 800; color: var(--brand-dark); text-decoration: underline; cursor: pointer; }
+  .roster-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+  .roster-overlay.hidden { display: none; }
+  .roster-panel { background: var(--card); border-radius: 14px; width: 100%; max-width: 860px; max-height: 85vh; display: flex; flex-direction: column; padding: 18px 20px; gap: 10px; }
+  .roster-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .roster-head h3 { margin: 0; }
+  .roster-head .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .roster-panel .table-scroll { max-height: none; flex: 1; }
+
   /* Badges */
   .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; color: #fff; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; }
   .badge.green { background: var(--green); }
@@ -502,6 +512,18 @@
         <table class="tbl" id="ral-tbl"><thead></thead><tbody></tbody></table>
       </div>
     </div>
+    <div class="roster-overlay hidden" id="roster-overlay">
+      <div class="roster-panel" role="dialog" aria-modal="true" aria-labelledby="roster-title">
+        <div class="roster-head">
+          <div><h3 id="roster-title"></h3><div class="sub" id="roster-sub"></div></div>
+          <div style="display:flex; gap:6px">
+            <button class="btn" id="roster-csv">Export CSV</button>
+            <button class="btn" id="roster-close">Close</button>
+          </div>
+        </div>
+        <div class="table-scroll"><table class="tbl" id="roster-tbl"><thead></thead><tbody></tbody></table></div>
+      </div>
+    </div>
   </section>
 
   <!-- Pending Clubs -->
@@ -709,7 +731,7 @@ async function loadBackingData() {
         // migration 0096; founder_users() is a founder-gated RPC that returns
         // the same columns, newest first.
         fetchAllPages(supabase.rpc("founder_users")),
-        fetchAllPages(supabase.from("payments").select("id, payer_user_id, receiver_user_id, kind, related_league_id, related_ralley_id, amount_cents, application_fee_cents, status, paid_at, created_at").order("created_at", { ascending: false })),
+        fetchAllPages(supabase.from("payments").select("id, payer_user_id, receiver_user_id, kind, related_league_id, related_ralley_id, amount_cents, application_fee_cents, status, paid_at, created_at, guest_id, guest_email").order("created_at", { ascending: false })),
         fetchAllPages(supabase.from("subscriptions").select("id, user_id, plan, status, current_period_end, created_at").order("created_at", { ascending: false })),
         fetchAllPages(supabase.from("ralleys").select("id, host_id, title, sport_id, location_text, location_visibility, sport_restriction, level_restriction, starts_at, capacity, description, host_role, created_at").order("starts_at", { ascending: false })),
         fetchAllPages(supabase.from("ralley_attendees").select("ralley_id, user_id, joined_at, checked_in_at, attended, attendance_marked_at")),
@@ -719,7 +741,13 @@ async function loadBackingData() {
         fetchAllPages(supabase.from("sports").select("id, name").order("name")),
         fetchAllPages(supabase.from("schools").select("id, name").order("name")),
       ]);
-    CACHE = { users, payments, subscriptions, ralleys, attendees, photos, posts, follows, sports, schools };
+    // No-account sign-ups (clubralley 0119), via founder_ralley_guests() (0120).
+    // Loaded on their own so the rest of the dashboard still works before
+    // 0120 is applied; guests === null means "could not read them".
+    let guests = null;
+    try { guests = await fetchAllPages(supabase.rpc("founder_ralley_guests")); }
+    catch (err) { console.warn("founder_ralley_guests unavailable:", err.message); }
+    CACHE = { users, payments, subscriptions, ralleys, attendees, photos, posts, follows, sports, schools, guests };
     return CACHE;
   } catch (err) {
     if ((err.message ?? "").includes("permission denied")) { showDenied(); throw err; }
@@ -1167,6 +1195,7 @@ function renderRalleys() {
   // Attendance metrics
   const attendCount = {};
   CACHE.attendees.forEach((a) => { attendCount[a.ralley_id] = (attendCount[a.ralley_id] || 0) + 1; });
+  (CACHE.guests || []).forEach((g) => { attendCount[g.ralley_id] = (attendCount[g.ralley_id] || 0) + 1; });
   const photoCount = {};
   CACHE.photos.forEach((p) => { photoCount[p.ralley_id] = (photoCount[p.ralley_id] || 0) + 1; });
 
@@ -1252,7 +1281,7 @@ function renderRalleys() {
       { key: "host_role", label: "Role", render: (r) => `<span class="badge ${r.host_role === "club" ? "blue" : r.host_role === "captain" ? "amber" : "muted"}">${escapeHtml((r.host_role ?? "player").toUpperCase())}</span>` },
       { key: "location_text", label: "Location", render: (r) => escapeHtml(r.location_text ?? "—") },
       { key: "capacity", label: "Cap", num: true },
-      { key: "attendees", label: "Joined", num: true },
+      { key: "attendees", label: "Joined", num: true, render: (r) => `<button class="roster-link" data-ralley="${escapeHtml(r.id)}" title="See who signed up">${r.attendees}</button>` },
       { key: "fill_pct", label: "Fill", num: true, render: (r) => {
         const pct = Math.round(r.fill_pct * 100);
         const cls = pct >= 100 ? "full" : pct >= 75 ? "warn" : "";
@@ -1266,6 +1295,10 @@ function renderRalleys() {
   $("ral-filter-sport").onchange = applyRalFilters;
   $("ral-search").oninput = applyRalFilters;
   applyRalFilters();
+  $("ral-tbl").onclick = (e) => {
+    const b = e.target.closest("button.roster-link");
+    if (b) openRoster(b.dataset.ralley);
+  };
   $("csv-ralleys").onclick = () => downloadCsv(`ralleys_${todayIso()}.csv`, ralRows.map((r) => ({
     id: r.id, title: r.title, sport: r.sport_name, host: r.host_name, host_username: r.host_username,
     starts_at: r.starts_at, capacity: r.capacity, attendees: r.attendees, fill_pct: Math.round(r.fill_pct * 100),
@@ -1901,6 +1934,57 @@ function renderTable(tblId, cols, rows, defaultSortKey, defaultSortDir = "asc") 
   }
   tbody.innerHTML = sorted.map((r) => `<tr>${cols.map((c) => `<td style="text-align:${c.num ? "right" : "left"}">${c.render ? c.render(r) : escapeHtml(String(r[c.key] ?? "—"))}</td>`).join("")}</tr>`).join("");
 }
+
+// ===== Who signed up for one Ralley =====
+// App players come from ralley_attendees; no-account sign-ups from
+// founder_ralley_guests(). Paid = a 'paid' payment row for this Ralley from
+// that person (payer_user_id for players, guest_id for guests).
+function openRoster(ralleyId) {
+  const r = CACHE.ralleys.find((x) => x.id === ralleyId);
+  if (!r) return;
+  const paidBy = new Set();
+  CACHE.payments.filter((p) => p.related_ralley_id === ralleyId && p.status === "paid").forEach((p) => {
+    if (p.payer_user_id) paidBy.add("u:" + p.payer_user_id);
+    if (p.guest_id) paidBy.add("g:" + p.guest_id);
+  });
+  const players = CACHE.attendees.filter((a) => a.ralley_id === ralleyId).map((a) => {
+    const u = userById(a.user_id);
+    return {
+      first_name: u?.first_name ?? "", last_name: u?.last_name ?? "",
+      username: u?.username ?? "", email: u?.email ?? "",
+      type: a.user_id === r.host_id ? "Host" : "App",
+      signed_up_at: a.joined_at,
+      paid: paidBy.has("u:" + a.user_id) ? "Yes" : "",
+      attended: a.attended === true ? "Yes" : a.attended === false ? "No" : "",
+    };
+  });
+  const guests = (CACHE.guests || []).filter((g) => g.ralley_id === ralleyId).map((g) => ({
+    first_name: g.first_name, last_name: g.last_name, username: "", email: g.email,
+    type: "Guest (no account)", signed_up_at: g.created_at,
+    paid: paidBy.has("g:" + g.id) ? "Yes" : "", attended: "",
+  }));
+  const rows = players.concat(guests);
+
+  $("roster-title").textContent = `${r.title ?? "Ralley"} — ${rows.length} signed up`;
+  $("roster-sub").textContent = `${fmtDateTime(r.starts_at)} · ${players.length} in the app · ` +
+    (CACHE.guests === null ? "no-account sign-ups could not be loaded" : `${guests.length} without an account`);
+  renderTable("roster-tbl", [
+    { key: "last_name", label: "Name", render: (x) => escapeHtml(`${x.first_name} ${x.last_name}`.trim() || x.username || "—") },
+    { key: "username", label: "Username", render: (x) => x.username ? `<a href="${MAIN_APP_URL}/u/${escapeHtml(x.username)}" target="_blank">@${escapeHtml(x.username)}</a>` : "—" },
+    { key: "email", label: "Email" },
+    { key: "type", label: "Type" },
+    { key: "signed_up_at", label: "Signed up", render: (x) => escapeHtml(fmtDateTime(x.signed_up_at)) },
+    { key: "paid", label: "Paid" },
+    { key: "attended", label: "Showed up" },
+  ], rows, "last_name", "asc");
+
+  const slug = (r.title ?? "ralley").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  $("roster-csv").onclick = () => downloadCsv(`${slug}_signups_${todayIso()}.csv`, rows);
+  $("roster-overlay").classList.remove("hidden");
+}
+$("roster-close").onclick = () => $("roster-overlay").classList.add("hidden");
+$("roster-overlay").onclick = (e) => { if (e.target.id === "roster-overlay") $("roster-overlay").classList.add("hidden"); };
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("roster-overlay").classList.add("hidden"); });
 
 // ===== CSV =====
 function downloadCsv(filename, rows) {
