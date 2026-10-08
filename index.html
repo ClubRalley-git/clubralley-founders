@@ -1596,17 +1596,48 @@ function renderReports() {
         <span class="ts">${fmtDateTime(r.created_at)}</span>
         <span class="kind">${r.target_kind}</span>
       </div>
+      ${urgentLine(r)}
       <div class="reason">${escapeHtml(r.reason ?? "—")}</div>
       ${r.note ? `<div class="note">${escapeHtml(r.note)}</div>` : ""}
       <div class="meta">Reporter @${escapeHtml(userById(r.reporter_id)?.username ?? "—")} → target ${escapeHtml(r.target_id.slice(0, 8))}…</div>
       <div class="actions">
         ${targetUrl ? `<a href="${targetUrl}" target="_blank" rel="noopener" style="text-decoration:none"><button class="open-btn">Open target</button></a>` : ""}
+        ${isContentReport(r) ? `<button class="open-btn" data-preview="${r.id}">Show content</button>` : ""}
+        ${isContentReport(r) && r.status !== "actioned" ? `<button class="actioned-btn" data-remove="${r.id}" style="background:#dc2626;border-color:#dc2626">Remove content</button>` : ""}
         ${r.status !== "actioned" ? `<button class="actioned-btn" data-id="${r.id}" data-status="actioned">Mark actioned</button>` : ""}
         ${r.status !== "dismissed" ? `<button class="ghost" data-id="${r.id}" data-status="dismissed">Dismiss</button>` : ""}
         ${r.status === "open" ? `<button class="ghost" data-id="${r.id}" data-status="reviewed">Mark reviewed</button>` : ""}
-      </div>`;
+      </div>
+      <div class="note" id="preview-${r.id}" style="display:none"></div>`;
     c.appendChild(div);
   });
+}
+
+// Posts, comments and messages can be shown and removed from here through
+// the founder-remove-content function, which also deletes the photos (a
+// row deleted by hand leaves its files public).
+function isContentReport(r) {
+  return r.target_kind === "post" || r.target_kind === "comment" || r.target_kind === "message";
+}
+// Take It Down Act: a reported intimate image must be gone within 48 hours.
+const TAKE_IT_DOWN_REASON = "Intimate image shared without consent";
+function urgentLine(r) {
+  if (r.reason !== TAKE_IT_DOWN_REASON || r.status === "actioned" || r.status === "dismissed") return "";
+  const hoursLeft = Math.round((new Date(r.created_at).getTime() + 48 * 3600e3 - Date.now()) / 3600e3);
+  const when = hoursLeft > 0 ? `${hoursLeft} hours left` : `OVERDUE by ${-hoursLeft} hours`;
+  return `<div class="errbox" style="margin:6px 0">Remove within 48 hours of the report (Take It Down Act): ${when}</div>`;
+}
+async function contentCall(action, reportId) {
+  const { data, error } = await supabase.functions.invoke("founder-remove-content", {
+    body: { action, report_id: reportId },
+  });
+  if (error) {
+    // supabase-js hides the body on a non-2xx; read it so the real reason shows.
+    let msg = error.message;
+    try { const b = await error.context.json(); msg = b.error || msg; } catch {}
+    return { ok: false, error: msg };
+  }
+  return data;
 }
 function reportBadge(status) {
   if (status === "open") return "red";
@@ -1628,6 +1659,28 @@ $("reports-filter").addEventListener("click", (e) => {
 });
 
 $("tab-reports").addEventListener("click", async (e) => {
+  const prev = e.target.closest("button[data-preview]");
+  if (prev) {
+    const box = $("preview-" + prev.dataset.preview);
+    box.style.display = "block"; box.textContent = "Loading…";
+    const d = await contentCall("preview", prev.dataset.preview);
+    if (!d.ok) { box.textContent = "Couldn't load: " + d.error; return; }
+    if (d.gone) { box.textContent = "Already deleted."; return; }
+    const media = [...(d.image_urls || []), ...(d.video_urls || [])]
+      .map((u) => `<a href="${escapeHtml(u)}" target="_blank" rel="noopener">${/\.(mp4|mov)/i.test(u) ? "video" : "photo"}</a>`).join(" · ");
+    box.innerHTML = `<b>@${escapeHtml(d.author ?? "unknown")}</b> · ${fmtDateTime(d.created_at)}<br>${escapeHtml(d.body || "(no text)")}${media ? `<br>${media}` : ""}`;
+    return;
+  }
+  const rm = e.target.closest("button[data-remove]");
+  if (rm) {
+    if (!confirm("Remove this for everyone? This deletes it and its photos and can't be undone.")) return;
+    rm.disabled = true; rm.textContent = "Removing…";
+    const d = await contentCall("remove", rm.dataset.remove);
+    if (!d.ok) { alert("Couldn't remove: " + d.error); rm.disabled = false; rm.textContent = "Remove content"; return; }
+    if (d.files_failed && d.files_failed.length) alert("Removed, but some files did not delete: " + d.files_failed.join("; "));
+    await loadReports();
+    return;
+  }
   const btn = e.target.closest("button[data-status]"); if (!btn) return;
   const id = btn.dataset.id, status = btn.dataset.status;
   const { data: authData } = await supabase.auth.getUser();
