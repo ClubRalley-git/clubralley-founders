@@ -264,6 +264,7 @@
     <button class="tab" data-tab="ambassadors">Ambassadors<span class="redcount" id="amb-count"></span></button>
     <button class="tab" data-tab="reports">Reports <span id="reports-count"></span></button>
     <button class="tab" data-tab="reviews">Reviews <span id="reviews-count"></span></button>
+    <button class="tab" data-tab="instagram">Instagram</button>
   </div>
 
   <!-- Overview -->
@@ -610,6 +611,35 @@
     <div class="loading" id="reviews-loading">Loading…</div>
     <div id="reviews-content" style="display:none"></div>
   </section>
+
+  <!-- Instagram (read-only, via /api/instagram; the token never reaches this page) -->
+  <section id="tab-instagram" style="display:none">
+    <div class="loading" id="ig-loading">Loading Instagram…</div>
+    <div class="err" id="ig-err" style="display:none; color:var(--red); font-size:13px"></div>
+    <div id="ig-content" style="display:none">
+      <div class="grid-4">
+        <div class="kpi dark"><div class="lbl">Followers</div><div class="num" id="ig-followers">0</div><div class="sub" id="ig-followers-sub">—</div></div>
+        <div class="kpi"><div class="lbl">Accounts reached · 7 days</div><div class="num" id="ig-reach7">0</div><div class="sub" id="ig-reach28">—</div></div>
+        <div class="kpi"><div class="lbl">Profile visits · 7 days</div><div class="num" id="ig-visits7">0</div><div class="sub" id="ig-visits28">—</div></div>
+        <div class="kpi"><div class="lbl">Link-in-bio taps · 7 days</div><div class="num" id="ig-clicks7">0</div><div class="sub" id="ig-clicks28">—</div></div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 16px">
+        <div class="card"><h2>Average reach by post type</h2><div id="ig-by-type"></div></div>
+        <div class="card"><h2>Followers by age</h2><div id="ig-age"></div></div>
+      </div>
+      <div class="grid-2" style="margin-top: 16px">
+        <div class="card"><h2>Top follower cities</h2><div id="ig-city"></div></div>
+        <div class="card"><h2>Followers by gender</h2><div id="ig-gender"></div><p class="meta" id="ig-demo-note" style="font-size:11px; color:var(--muted); margin:12px 0 0"></p></div>
+      </div>
+
+      <div class="section-title"><h3>Every post, by reach</h3><button class="btn" id="csv-ig">Export CSV</button></div>
+      <p style="font-size:12px; color:var(--muted); margin:0 0 8px">"App sign-ups within 2 days" counts new app accounts in the 48 hours after the post went up. It shows timing only; it does not prove the post caused them.</p>
+      <div class="table-scroll"><table class="tbl" id="ig-posts-tbl"><thead></thead><tbody></tbody></table></div>
+      <p style="font-size:11px; color:var(--muted); margin-top:10px" id="ig-fetched"></p>
+    </div>
+  </section>
+
 </div>
 
 <script type="module">
@@ -674,7 +704,7 @@ $("login-form").addEventListener("submit", async (e) => {
 
 $("denied-logout").addEventListener("click", logout);
 $("logout-btn").addEventListener("click", logout);
-$("refresh-btn").addEventListener("click", () => loadAll());
+$("refresh-btn").addEventListener("click", () => { loadAll(); if (IG_LOADED) loadInstagram(true); });
 
 async function logout() { await supabase.auth.signOut(); showLogin(); }
 
@@ -1859,14 +1889,105 @@ $("reviews-filter").addEventListener("click", (e) => {
   btn.classList.add("active"); reviewsFilter = btn.dataset.filter; renderReviews();
 });
 
+// ===== Instagram =====
+// Data comes from /api/instagram (Vercel function holding the read-only token).
+let IG_LOADED = false;
+let IG_POSTS = [];
+
+async function loadInstagram(fresh = false) {
+  IG_LOADED = true;
+  show("ig-loading"); hide("ig-err");
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const r = await fetch("/api/instagram" + (fresh ? "?fresh=1" : ""), {
+      headers: { Authorization: "Bearer " + (session?.access_token ?? "") },
+    });
+    let body = null;
+    try { body = await r.json(); } catch { /* no JSON: fall through */ }
+    if (!r.ok) throw new Error(body?.error ?? `Could not reach the Instagram service (HTTP ${r.status}).`);
+    renderInstagram(body);
+    hide("ig-loading"); show("ig-content");
+  } catch (err) {
+    // A network failure (no response at all) is different from Instagram saying no.
+    hide("ig-loading");
+    $("ig-err").textContent = err instanceof TypeError ? "Could not reach the dashboard server. Nothing is wrong with Instagram; try Refresh." : err.message;
+    show("ig-err");
+    IG_LOADED = false;
+  }
+}
+
+function renderInstagram(d) {
+  const p = d.profile ?? {};
+  $("ig-followers").textContent = fmtNum(p.followers_count);
+  $("ig-followers-sub").textContent = `${fmtNum(p.media_count)} posts · following ${fmtNum(p.follows_count)}`;
+  const l7 = d.last7 ?? {}, l28 = d.last28 ?? {};
+  $("ig-reach7").textContent = fmtNum(l7.reach);
+  $("ig-reach28").textContent = `${fmtNum(l28.reach)} in the last 28 days`;
+  $("ig-visits7").textContent = fmtNum(l7.profile_views);
+  $("ig-visits28").textContent = `${fmtNum(l28.profile_views)} in the last 28 days`;
+  $("ig-clicks7").textContent = fmtNum(l7.website_clicks);
+  $("ig-clicks28").textContent = `${fmtNum(l28.website_clicks)} in the last 28 days`;
+
+  IG_POSTS = d.posts ?? [];
+  const byType = {};
+  IG_POSTS.forEach((x) => { if (x.reach == null) return; (byType[x.type] ??= []).push(x.reach); });
+  $("ig-by-type").innerHTML = renderBars(Object.entries(byType)
+    .map(([t, v]) => [`${t} (${v.length} posts)`, Math.round(v.reduce((a, b) => a + b, 0) / v.length)])
+    .sort((a, b) => b[1] - a[1]));
+
+  const demo = d.demo ?? {};
+  const bars = (rows, n) => rows ? renderBars(rows.slice(0, n)) : `<div class="meta">Instagram did not return this.</div>`;
+  $("ig-age").innerHTML = bars(demo.age ? [...demo.age].sort((a, b) => a[0].localeCompare(b[0])) : null, 10);
+  $("ig-city").innerHTML = bars(demo.city, 10);
+  const gName = { F: "Women", M: "Men", U: "Not stated" };
+  $("ig-gender").innerHTML = bars(demo.gender ? demo.gender.map(([k, v]) => [gName[k] ?? k, v]) : null, 5);
+  const placed = (demo.gender ?? []).reduce((a, r) => a + r[1], 0);
+  $("ig-demo-note").textContent = placed
+    ? `Instagram can describe ${fmtNum(placed)} of ${fmtNum(p.followers_count)} followers; the rest are left out of these charts.`
+    : "";
+
+  // App sign-ups in the 48h after each post (timing only).
+  const signupTimes = (CACHE.users ?? []).map((u) => Date.parse(u.created_at)).filter(Boolean);
+  IG_POSTS.forEach((x) => {
+    const t0 = Date.parse(x.timestamp), t1 = t0 + 48 * 3600 * 1000;
+    x.signups48 = signupTimes.filter((t) => t >= t0 && t < t1).length;
+  });
+
+  const rows = [...IG_POSTS].sort((a, b) => (b.reach ?? -1) - (a.reach ?? -1));
+  const tbl = $("ig-posts-tbl");
+  tbl.querySelector("thead").innerHTML = `<tr><th>Posted</th><th>Type</th><th>Post</th><th>Reach</th><th>Views</th><th>Likes</th><th>Comments</th><th>Saves</th><th>Shares</th><th>App sign-ups within 2 days</th></tr>`;
+  tbl.querySelector("tbody").innerHTML = rows.map((x) => `<tr>
+    <td>${fmtDate(x.timestamp)}</td>
+    <td>${escapeHtml(x.type)}</td>
+    <td style="max-width:360px"><a href="${escapeHtml(x.permalink)}" target="_blank" rel="noopener">${escapeHtml((x.caption || "(no caption)").replace(/\s+/g, " ").slice(0, 80))}</a></td>
+    <td>${x.reach == null ? "—" : fmtNum(x.reach)}</td>
+    <td>${x.views == null ? "—" : fmtNum(x.views)}</td>
+    <td>${fmtNum(x.likes)}</td><td>${fmtNum(x.comments)}</td><td>${fmtNum(x.saved)}</td><td>${fmtNum(x.shares)}</td>
+    <td>${x.signups48}</td></tr>`).join("");
+
+  $("ig-fetched").textContent = `From Instagram at ${fmtDateTime(d.fetchedAt)}. Refresh pulls new numbers.`;
+}
+
+$("csv-ig").addEventListener("click", () => {
+  const head = ["posted", "type", "caption", "link", "reach", "views", "likes", "comments", "saves", "shares", "app_signups_within_2_days"];
+  const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const lines = [head.join(",")].concat([...IG_POSTS].sort((a, b) => (b.reach ?? -1) - (a.reach ?? -1)).map((x) =>
+    [x.timestamp, x.type, (x.caption || "").replace(/\s+/g, " "), x.permalink, x.reach, x.views, x.likes, x.comments, x.saved, x.shares, x.signups48].map(esc).join(",")));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
+  a.download = `clubralley-instagram-${todayIso()}.csv`; a.click();
+});
+
 // ===== Tabs =====
 document.querySelectorAll(".tab").forEach((t) => {
   t.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
     t.classList.add("active");
-    ["overview","finances","users","ralleys","noshows","clubs","ambassadors","reports","reviews"].forEach((name) => {
+    ["overview","finances","users","ralleys","noshows","clubs","ambassadors","reports","reviews","instagram"].forEach((name) => {
       $(`tab-${name}`).style.display = name === t.dataset.tab ? "" : "none";
     });
+    // Instagram costs ~50 calls to Instagram, so it loads only when opened.
+    if (t.dataset.tab === "instagram" && !IG_LOADED) loadInstagram();
   });
 });
 

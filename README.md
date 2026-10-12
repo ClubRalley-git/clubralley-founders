@@ -44,3 +44,10 @@ Go to Supabase SQL Editor and run:
 insert into admin_emails (email) values ('newfounder@example.com');
 ```
 They sign in with that email + their Club Ralley app password.
+
+## Instagram tab
+
+The Instagram tab reads @clubralley's numbers through `api/instagram.js`, a Vercel function. The Instagram key lives only in the Vercel env var `IG_TOKEN` (Production), never in this repo or the page. The function refuses anyone who is not a founder (`is_founder()`).
+
+- Meta app: **Club Ralley Insights** (app ID 2346675999071891), on Jaycie Mair's developer account. Read-only permissions: `instagram_business_basic`, `instagram_business_manage_insights`.
+- The key lasts about 60 days (made 2026-10-12, so it expires around 2026-12-11). To renew: get a new one (Meta app > Instagram API > API setup with Instagram login > Generate token), paste it into Vercel > Settings > Environment Variables > `IG_TOKEN`, then redeploy. The tab says "The Instagram key has expired" when this is overdue.
