@@ -265,6 +265,7 @@
     <button class="tab" data-tab="reports">Reports <span id="reports-count"></span></button>
     <button class="tab" data-tab="reviews">Reviews <span id="reviews-count"></span></button>
     <button class="tab" data-tab="instagram">Instagram</button>
+    <button class="tab" data-tab="merch">Mockneck</button>
   </div>
 
   <!-- Overview -->
@@ -640,6 +641,27 @@
     </div>
   </section>
 
+  <!-- Mockneck preorder (Stripe Payment Links, read via founder-merch-orders) -->
+  <section id="tab-merch" style="display:none">
+    <div class="loading" id="merch-loading">Loading orders from Stripe…</div>
+    <div class="err" id="merch-err" style="display:none; color:var(--red); font-size:13px"></div>
+    <div id="merch-content" style="display:none">
+      <div class="grid-4">
+        <div class="kpi dark"><div class="lbl">Shirts ordered</div><div class="num" id="merch-count">0</div><div class="sub" id="merch-count-sub">—</div></div>
+        <div class="kpi"><div class="lbl">Money in</div><div class="num" id="merch-gross">$0.00</div><div class="sub" id="merch-gross-sub">—</div></div>
+        <div class="kpi"><div class="lbl">Mailroom pickup</div><div class="num" id="merch-mail">0</div><div class="sub">Bucknell mailbox</div></div>
+        <div class="kpi"><div class="lbl">Shipping</div><div class="num" id="merch-ship">0</div><div class="sub">mailed to an address</div></div>
+      </div>
+      <div class="grid-2" style="margin-top: 16px">
+        <div class="card"><h2>Shirts by size</h2><div id="merch-sizes"></div></div>
+        <div class="card"><h2>Links</h2><div id="merch-links"></div></div>
+      </div>
+      <div class="section-title"><h3>Every order, newest first</h3><button class="btn" id="csv-merch">Export CSV</button></div>
+      <div class="table-scroll"><table class="tbl" id="merch-tbl"><thead></thead><tbody></tbody></table></div>
+      <p style="font-size:11px; color:var(--muted); margin-top:10px" id="merch-fetched"></p>
+    </div>
+  </section>
+
 </div>
 
 <script type="module">
@@ -704,7 +726,7 @@ $("login-form").addEventListener("submit", async (e) => {
 
 $("denied-logout").addEventListener("click", logout);
 $("logout-btn").addEventListener("click", logout);
-$("refresh-btn").addEventListener("click", () => { loadAll(); if (IG_LOADED) loadInstagram(true); });
+$("refresh-btn").addEventListener("click", () => { loadAll(); if (IG_LOADED) loadInstagram(true); if (MERCH_LOADED) loadMerch(); });
 
 async function logout() { await supabase.auth.signOut(); showLogin(); }
 
@@ -1978,16 +2000,94 @@ $("csv-ig").addEventListener("click", () => {
   a.download = `clubralley-instagram-${todayIso()}.csv`; a.click();
 });
 
+// ===== Mockneck preorder =====
+// Orders come from Stripe through the founder-merch-orders Edge Function;
+// these sales never touch our database.
+let MERCH_LOADED = false;
+let MERCH_ORDERS = [];
+
+async function loadMerch() {
+  MERCH_LOADED = true;
+  show("merch-loading"); hide("merch-err");
+  try {
+    const { data, error } = await supabase.functions.invoke("founder-merch-orders", { body: {} });
+    if (error) {
+      // supabase-js hides the body on a non-2xx; read it so the real reason shows.
+      let msg = null;
+      try { const b = await error.context.json(); msg = b.error; } catch {}
+      throw new Error(msg ?? "Could not reach the orders service. Nothing changed in Stripe; try Refresh.");
+    }
+    renderMerch(data);
+    hide("merch-loading"); show("merch-content");
+  } catch (err) {
+    hide("merch-loading");
+    $("merch-err").textContent = err.message;
+    show("merch-err");
+    MERCH_LOADED = false;
+  }
+}
+
+function renderMerch(d) {
+  MERCH_ORDERS = d.orders ?? [];
+  const live = MERCH_ORDERS.filter((o) => o.paid && !o.refunded);
+  const shirts = live.reduce((a, o) => a + (o.quantity || 1), 0);
+  const refunded = MERCH_ORDERS.filter((o) => o.refunded).length;
+  $("merch-count").textContent = fmtNum(shirts);
+  $("merch-count-sub").textContent = `${fmtNum(live.length)} orders` + (refunded ? ` · ${refunded} refunded, not counted` : "");
+  const gross = live.reduce((a, o) => a + o.amount_cents, 0);
+  const ship = live.reduce((a, o) => a + o.shipping_cents, 0);
+  $("merch-gross").textContent = fmtUSD(gross);
+  $("merch-gross-sub").textContent = ship ? `includes ${fmtUSD(ship)} shipping` : "before Stripe's fee";
+  $("merch-mail").textContent = fmtNum(live.filter((o) => o.link === "Mailroom").reduce((a, o) => a + (o.quantity || 1), 0));
+  $("merch-ship").textContent = fmtNum(live.filter((o) => o.link === "Shipping").reduce((a, o) => a + (o.quantity || 1), 0));
+
+  const sizes = {};
+  live.forEach((o) => { const k = o.size ?? "Not given"; sizes[k] = (sizes[k] || 0) + (o.quantity || 1); });
+  const order = ["XS", "S", "SMALL", "M", "MEDIUM", "L", "LARGE", "XL"];
+  const rank = (k) => { const i = order.indexOf(String(k).toUpperCase()); return i < 0 ? 99 : i; };
+  $("merch-sizes").innerHTML = Object.keys(sizes).length
+    ? renderBars(Object.entries(sizes).sort((a, b) => rank(a[0]) - rank(b[0])))
+    : `<div class="meta">No orders yet.</div>`;
+
+  $("merch-links").innerHTML = (d.links ?? []).map((l) =>
+    `<div style="margin:6px 0"><b>${escapeHtml(l.label)}</b> · ${l.active === false ? '<span style="color:var(--red)">turned off</span>' : l.active ? "taking orders" : "not found in Stripe"}<br><a href="${escapeHtml(l.url)}" target="_blank" rel="noopener" style="font-size:12px">${escapeHtml(l.url)}</a></div>`).join("");
+
+  const addr = (a) => a ? [a.line1, a.line2, a.city, a.state, a.postal_code].filter(Boolean).join(", ") : "";
+  const tbl = $("merch-tbl");
+  tbl.querySelector("thead").innerHTML = `<tr><th>Ordered</th><th>Name</th><th>Size</th><th>How</th><th>Mailbox / address</th><th>Phone</th><th>Email</th><th>Paid</th></tr>`;
+  tbl.querySelector("tbody").innerHTML = MERCH_ORDERS.length ? MERCH_ORDERS.map((o) => `<tr${o.refunded ? ' style="opacity:.5"' : ""}>
+    <td>${fmtDateTime(o.created * 1000)}</td>
+    <td>${escapeHtml(o.name ?? "")}</td>
+    <td><b>${escapeHtml(o.size ?? "—")}</b>${o.quantity > 1 ? " × " + o.quantity : ""}</td>
+    <td>${escapeHtml(o.link)}</td>
+    <td>${escapeHtml(o.link === "Mailroom" ? (o.mailbox ?? "") : addr(o.address))}</td>
+    <td>${escapeHtml(o.phone ?? "")}</td>
+    <td>${escapeHtml(o.email ?? "")}</td>
+    <td>${o.refunded ? "Refunded" : o.paid ? fmtUSD(o.amount_cents) : "Not paid"}</td></tr>`).join("")
+    : `<tr><td colspan="8" class="meta">No orders yet.</td></tr>`;
+
+  $("merch-fetched").textContent = `From Stripe at ${fmtDateTime(d.fetched_at)}. Refresh pulls new orders.`;
+}
+
+$("csv-merch").addEventListener("click", () => {
+  downloadCsv(`clubralley-mockneck-orders-${todayIso()}.csv`, MERCH_ORDERS.map((o) => ({
+    ordered: new Date(o.created * 1000).toISOString(), name: o.name, size: o.size, quantity: o.quantity, how: o.link,
+    mailbox: o.mailbox, address: o.address ? [o.address.line1, o.address.line2, o.address.city, o.address.state, o.address.postal_code].filter(Boolean).join(", ") : "",
+    phone: o.phone, email: o.email, paid: o.amount_cents / 100, status: o.refunded ? "refunded" : o.paid ? "paid" : "not paid",
+  })));
+});
+
 // ===== Tabs =====
 document.querySelectorAll(".tab").forEach((t) => {
   t.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
     t.classList.add("active");
-    ["overview","finances","users","ralleys","noshows","clubs","ambassadors","reports","reviews","instagram"].forEach((name) => {
+    ["overview","finances","users","ralleys","noshows","clubs","ambassadors","reports","reviews","instagram","merch"].forEach((name) => {
       $(`tab-${name}`).style.display = name === t.dataset.tab ? "" : "none";
     });
     // Instagram costs ~50 calls to Instagram, so it loads only when opened.
     if (t.dataset.tab === "instagram" && !IG_LOADED) loadInstagram();
+    if (t.dataset.tab === "merch" && !MERCH_LOADED) loadMerch();
   });
 });
 
