@@ -147,6 +147,33 @@
   .explain { color: var(--muted); font-size: 12px; margin: 10px 2px 0; }
   section > .err { background: var(--amber-bg); border: 1px solid var(--amber-border); color: var(--text); border-radius: 14px; padding: 16px 18px; font-size: 14px; line-height: 1.55; }
   section > .err b { color: var(--amber); }
+  /* Excel look: shared by the Break-even sheets and the Bank ledger */
+  .xl-book { background: #fff; border: 1px solid #C6C6C6; font-family: Calibri, Carlito, "Segoe UI", Arial, sans-serif; font-size: 14px; color: #000; }
+  .xl-bar { display: flex; align-items: stretch; border-bottom: 1px solid #D4D4D4; min-height: 30px; }
+  .xl-name { width: 72px; flex: 0 0 auto; border-right: 1px solid #D4D4D4; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+  .xl-fx { padding: 0 10px; display: flex; align-items: center; font-style: italic; color: #6B6B6B; border-right: 1px solid #D4D4D4; }
+  .xl-formula { flex: 1; display: flex; align-items: center; padding: 0 10px; font-size: 13px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .xl-sheet { overflow-x: auto; }
+  .xl-note { margin: 0; padding: 8px 12px; font-size: 12px; color: #444; border-top: 1px solid #D4D4D4; }
+  table.sheet.xl { border-collapse: collapse; font-family: inherit; font-size: 14px; background: #fff; width: auto; min-width: 100%; }
+  table.sheet.xl th, table.sheet.xl td { border: 1px solid #D4D4D4; padding: 3px 9px; height: 26px; text-transform: none; letter-spacing: 0; font-size: 14px; color: #000; background: #fff; font-weight: 400; cursor: cell; }
+  table.sheet.xl tr.xh th, table.sheet.xl .rn { background: #F3F3F3; color: #555; text-align: center; font-size: 12px; font-weight: 400; cursor: default; }
+  table.sheet.xl .rn { width: 38px; min-width: 38px; }
+  table.sheet.xl tr.xh th:first-child { width: 38px; }
+  table.sheet.xl tr:not(.xh) th { font-weight: 700; }
+  table.sheet.xl tr.total td { background: #fff; color: #000; font-weight: 700; border-bottom: 3px double #000; }
+  table.sheet.xl tr.result td { font-weight: 700; }
+  table.sheet.xl tr.sub td { color: #444; font-size: 13px; }
+  table.sheet.xl td.sel, table.sheet.xl th.sel { outline: 2px solid #107C41; outline-offset: -2px; }
+  table.sheet.xl input.cell { width: 100%; min-width: 80px; border: 0; border-radius: 0; background: transparent; padding: 0; font: inherit; text-align: right; }
+  table.sheet.xl td:has(input.cell) { background: #FFF2CC; }
+  table.sheet.xl td:has(input.cell.fill) { background: #FCE4E4; }
+  table.sheet.xl input.cell.fill::placeholder { color: #C00000; font-weight: 700; }
+  table.sheet.xl input.cell:focus { outline: none; }
+  .xl-tabs { display: flex; flex-wrap: wrap; gap: 2px; background: #F3F3F3; border-top: 1px solid #C6C6C6; padding: 0 8px; }
+  .xl-tab { font: inherit; font-size: 13px; padding: 7px 16px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: #333; cursor: pointer; }
+  .xl-tab:hover { background: #E8E8E8; }
+  .xl-tab.active { background: #fff; color: #107C41; font-weight: 700; border-bottom-color: #107C41; }
   /* Break-even sheets: look like a spreadsheet, yellow cells are typed in. */
   table.sheet { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
   table.sheet th, table.sheet td { border: 1px solid var(--border); padding: 6px 9px; text-align: left; vertical-align: middle; }
@@ -338,6 +365,7 @@
       </div>
       <div class="group">
         <div class="group-label">Money</div>
+        <button class="tab" data-tab="bank" type="button">Bank</button>
         <button class="tab" data-tab="finances" type="button">Finances</button>
         <button class="tab" data-tab="breakeven" type="button">Break-even</button>
         <button class="tab" data-tab="merch" type="button">Merch</button>
@@ -530,7 +558,8 @@
               <option value="all">All kinds</option>
               <option value="subscription">Subscription</option>
               <option value="league_registration">League registration</option>
-              <option value="ralley_join">Ralley join</option>
+              <option value="ralley_join">Ticket in the app</option>
+              <option value="ralley_guest">Ticket on the website</option>
             </select>
             <input class="search" id="fin-search" placeholder="Search payer name / username / email…" />
             <button class="btn" id="csv-fin-payments">Export CSV</button>
@@ -543,30 +572,52 @@
     </div>
   </section>
 
+  <!-- Bank: the Chase account Stripe pays into, plus what Stripe is still holding.
+       Stripe numbers are live (founder-bank Edge Function, read-only); the bank
+       balance itself is typed in, because no bank API is connected. -->
+  <section id="tab-bank" style="display:none">
+    <div class="loading" id="bank-loading">Asking Stripe…</div>
+    <div class="err" id="bank-err" style="display:none"></div>
+    <div id="bank-content" style="display:none; flex-direction:column; gap:20px">
+      <div class="home-kpis">
+        <div class="home-kpi dark"><div class="lbl">In the bank (estimate)</div><div class="num" id="bk-bal">$0</div><div class="sub" id="bk-bal-sub">—</div></div>
+        <div class="home-kpi"><div class="lbl">Still in Stripe</div><div class="num" id="bk-stripe">$0</div><div class="sub" id="bk-stripe-sub">—</div></div>
+        <div class="home-kpi"><div class="lbl">Sent to the bank so far</div><div class="num" id="bk-sent">$0</div><div class="sub" id="bk-sent-sub">—</div></div>
+        <div class="home-kpi"><div class="lbl">Monthly costs</div><div class="num" id="bk-costs">$0</div><div class="sub">from Break-even; paid out of the bank</div></div>
+      </div>
+      <p class="explain" style="margin:0">Stripe numbers are live. We can't see the Chase account itself, so the estimate starts from the last bank balance someone typed in and adds every Stripe payout that landed after that day. Type the real balance from the Chase app any time to reset it. What you type stays on this computer only.</p>
+      <div class="xl-book" id="bk-book">
+        <div class="xl-bar"><span class="xl-name" id="bk-name">A1</span><span class="xl-fx">fx</span><span class="xl-formula" id="bk-formula"></span></div>
+        <div class="xl-sheet" data-sheet="bank"><table class="sheet" id="bk-ledger"></table></div>
+        <div class="xl-sheet" data-sheet="stripe" hidden><table class="sheet" id="bk-accounts"></table></div>
+        <div class="xl-sheet" data-sheet="payouts" hidden><table class="sheet" id="bk-payouts"></table></div>
+        <div class="xl-tabs" role="tablist" aria-label="Sheets">
+          <button type="button" class="xl-tab active" data-sheet="bank">Bank</button>
+          <button type="button" class="xl-tab" data-sheet="stripe">Stripe now</button>
+          <button type="button" class="xl-tab" data-sheet="payouts">Every payout</button>
+        </div>
+      </div>
+      <p style="font-size:11px; color:var(--muted); margin:0" id="bk-fetched"></p>
+    </div>
+  </section>
+
   <!-- Break-even: one sheet per thing that costs money -->
   <section id="tab-breakeven" style="display:none">
       <div id="be-page">
-          <p class="sheet-note" style="margin:0 0 6px">Yellow cells can be typed in and everything recalculates. Red cells are costs nobody has written down yet, so they are counted as $0 until filled in. What you type stays on this computer only; <button class="btn" id="be-reset" type="button" style="padding:2px 8px; font-size:11px">Reset to the saved numbers</button></p>
-
-          <details class="drop" id="d-be-ticket" open>
-            <summary>1 · What we keep from one ticket</summary>
-            <div class="drop-body sheet-wrap"><table class="sheet" id="be-ticket"></table></div>
-          </details>
-
-          <details class="drop" id="d-be-running" open>
-            <summary>2 · Running costs every month <span class="hint">apps, servers, accounts, payouts</span></summary>
-            <div class="drop-body sheet-wrap"><table class="sheet" id="be-running"></table><p class="sheet-note" id="be-running-note"></p></div>
-          </details>
-
-          <details class="drop" id="d-be-5k">
-            <summary>3 · Homecoming 5K <span class="hint">tickets, sponsors, shirts, drinks, card fees</span></summary>
-            <div class="drop-body sheet-wrap"><table class="sheet" id="be-5k"></table><p class="sheet-note" id="be-5k-note"></p></div>
-          </details>
-
-          <details class="drop" id="d-be-merch">
-            <summary>4 · Mockneck <span class="hint">shirts, cost per shirt, shipping, card fees</span></summary>
-            <div class="drop-body sheet-wrap"><table class="sheet" id="be-merch"></table><p class="sheet-note" id="be-merch-note"></p></div>
-          </details>
+        <p class="explain" style="margin:0 0 12px">Yellow cells can be typed in and everything recalculates. Red cells are costs nobody has written down yet, counted as $0 until filled in. Click any cell to see what it is in the bar on top. What you type stays on this computer only. <button class="linkbtn" id="be-reset" type="button" style="padding:0; font-size:12px">Reset to the saved numbers</button></p>
+        <div class="xl-book" id="be-book">
+          <div class="xl-bar"><span class="xl-name" id="be-name">A1</span><span class="xl-fx">fx</span><span class="xl-formula" id="be-formula"></span></div>
+          <div class="xl-sheet" data-sheet="ticket"><table class="sheet" id="be-ticket"></table></div>
+          <div class="xl-sheet" data-sheet="running" hidden><table class="sheet" id="be-running"></table><p class="xl-note" id="be-running-note"></p></div>
+          <div class="xl-sheet" data-sheet="5k" hidden><table class="sheet" id="be-5k"></table><p class="xl-note" id="be-5k-note"></p></div>
+          <div class="xl-sheet" data-sheet="merch" hidden><table class="sheet" id="be-merch"></table><p class="xl-note" id="be-merch-note"></p></div>
+          <div class="xl-tabs" role="tablist" aria-label="Sheets">
+            <button type="button" class="xl-tab active" data-sheet="ticket">One ticket</button>
+            <button type="button" class="xl-tab" data-sheet="running">Running costs</button>
+            <button type="button" class="xl-tab" data-sheet="5k">Homecoming 5K</button>
+            <button type="button" class="xl-tab" data-sheet="merch">Mockneck</button>
+          </div>
+        </div>
       </div>
   </section>
 
@@ -644,6 +695,7 @@
   <section id="tab-ralleys" style="display:none">
     <div class="loading" id="ral-loading">Loading…</div>
     <div id="ral-content" style="display:none">
+      <p class="explain" style="margin:0 0 12px">Only Ralleys from Oct 16 on are counted. The Homecoming 5K is the first real one; everything before it was us testing and is hidden.</p>
       <div class="grid-4">
         <div class="kpi dark"><div class="lbl">Total ralleys</div><div class="num" id="ral-total">0</div><div class="sub" id="ral-total-sub">—</div></div>
         <div class="kpi"><div class="lbl">Upcoming</div><div class="num" id="ral-upcoming">0</div><div class="sub" id="ral-upcoming-sub">—</div></div>
@@ -784,6 +836,7 @@
        Club Ralley doing" in `app_ratings`. Both are out of 5 and both carry
        an optional comment. -->
   <section id="tab-reviews" style="display:none">
+    <p class="explain" style="margin:0 0 12px">Only reviews from Oct 16 on are counted. The ones before were founders and test accounts trying it out.</p>
     <div class="kpis" id="reviews-kpis"></div>
     <div class="filter-row" id="reviews-filter">
       <button class="active" data-filter="all">All</button>
@@ -941,7 +994,7 @@ $("login-form").addEventListener("submit", async (e) => {
 
 $("denied-logout").addEventListener("click", logout);
 $("logout-btn").addEventListener("click", logout);
-$("refresh-btn").addEventListener("click", () => { loadAll(); if (IG_LOADED) loadInstagram(true); if (MERCH_LOADED) loadMerch(); });
+$("refresh-btn").addEventListener("click", () => { loadAll(); if (IG_LOADED) loadInstagram(true); if (MERCH_LOADED) loadMerch(); if (BANK_LOADED) loadBank(); });
 
 async function logout() { await supabase.auth.signOut(); showLogin(); }
 
@@ -990,9 +1043,14 @@ async function fetchAllPages(query) {
   return rows;
 }
 
+// The Homecoming 5K (Fri Oct 16, 2026) is the first real Ralley; anything
+// that started before midnight ET that day was a test (Ava, 2026-10-16).
+const REAL_START = "2026-10-16T04:00:00.000Z";
+let TEST_HIDDEN = { ralleys: 0, payments: 0 };
+
 async function loadBackingData() {
   try {
-    const [users, payments, subscriptions, ralleys, attendees, photos, posts, follows, sports, schools] =
+    let [users, payments, subscriptions, ralleys, attendees, photos, posts, follows, sports, schools] =
       await Promise.all([
         // users.email is column-locked for every app role since clubralley
         // migration 0096; founder_users() is a founder-gated RPC that returns
@@ -1014,6 +1072,16 @@ async function loadBackingData() {
     let guests = null;
     try { guests = await fetchAllPages(supabase.rpc("founder_ralley_guests")); }
     catch (err) { console.warn("founder_ralley_guests unavailable:", err.message); }
+    // Everything before the first real Ralley was founders testing (Ava,
+    // 2026-10-16): hide those Ralleys and every ticket, sign-up and photo
+    // tied to them, so counts start at the Homecoming 5K.
+    const testIds = new Set(ralleys.filter((r) => r.starts_at < REAL_START).map((r) => r.id));
+    TEST_HIDDEN = { ralleys: testIds.size, payments: payments.filter((p) => testIds.has(p.related_ralley_id)).length };
+    ralleys = ralleys.filter((r) => !testIds.has(r.id));
+    attendees = attendees.filter((a) => !testIds.has(a.ralley_id));
+    photos = photos.filter((x) => !testIds.has(x.ralley_id));
+    payments = payments.filter((p) => !testIds.has(p.related_ralley_id));
+    if (guests) guests = guests.filter((g) => !testIds.has(g.ralley_id));
     CACHE = { users, payments, subscriptions, ralleys, attendees, photos, posts, follows, sports, schools, guests };
     return CACHE;
   } catch (err) {
@@ -2009,8 +2077,9 @@ async function loadReviews() {
     return;
   }
 
+  const real = (iso) => (iso ?? "") >= REAL_START;
   reviewsCache = [
-    ...(rall.data ?? []).map((r) => ({
+    ...(rall.data ?? []).filter((r) => real(r.created_at)).map((r) => ({
       key: `ralley:${r.id}`,
       type: "ralley",
       raterId: r.rater_user_id,
@@ -2020,7 +2089,7 @@ async function loadReviews() {
       comment: r.comment,
       at: r.created_at,
     })),
-    ...(rapp.data ?? []).map((r) => ({
+    ...(rapp.data ?? []).filter((r) => real(r.updated_at ?? r.created_at)).map((r) => ({
       key: `app:${r.user_id}`,
       type: "app",
       raterId: r.user_id,
@@ -2344,7 +2413,7 @@ function renderHome() {
   $("h-players-sub").textContent = `+${fmtNum(users.filter((u) => u.created_at >= week).length)} this week`;
 
   const monthStart = startOfMonthIso();
-  const tix = (CACHE.payments || []).filter((p) => p.status === "paid" && p.kind === "ralley_join" && (p.paid_at ?? p.created_at) >= monthStart);
+  const tix = (CACHE.payments || []).filter((p) => p.status === "paid" && ["ralley_join", "ralley_guest"].includes(p.kind) && (p.paid_at ?? p.created_at) >= monthStart);
   const gross = tix.reduce((a, p) => a + p.amount_cents, 0);
   const kept = tix.reduce((a, p) => a + (p.application_fee_cents || 0) / 100 - beCard(p.amount_cents / 100), 0);
   $("h-tix").textContent = fmtNum(tix.length);
@@ -2382,6 +2451,52 @@ function renderHome() {
   renderInbox();
   hide("home-loading"); $("home-content").style.display = "flex";
 }
+
+
+// ===== Excel look =====
+// Adds column letters and row numbers to a table, and wires the formula bar:
+// clicking a cell shows its address and what it is (BE_F has the formulas).
+const XL_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+function excelize(table, nameEl, formulaEl, formulas = {}) {
+  table.classList.add("xl");
+  const rows = [...table.rows];
+  const width = Math.max(...rows.map((r) => [...r.cells].reduce((a, c) => a + (c.colSpan || 1), 0)));
+  rows.forEach((r, i) => { const n = document.createElement(r.cells[0]?.tagName === "TH" ? "th" : "td"); n.className = "rn"; n.textContent = i + 1; r.insertBefore(n, r.firstChild); });
+  const head = table.insertRow(0);
+  head.className = "xh";
+  head.innerHTML = "<th></th>" + [...Array(width)].map((_, i) => `<th>${XL_LETTERS[i]}</th>`).join("");
+  const show = table._xlShow = (cell) => {
+    table.closest(".xl-book")?.querySelectorAll(".sel").forEach((c) => c.classList.remove("sel"));
+    if (!cell || cell.classList.contains("rn") || cell.parentElement.classList.contains("xh")) return;
+    cell.classList.add("sel");
+    let col = 0; for (const c of cell.parentElement.cells) { if (c === cell) break; if (!c.classList.contains("rn")) col += c.colSpan || 1; }
+    const row = [...table.rows].indexOf(cell.parentElement);
+    nameEl.textContent = XL_LETTERS[col] + row;
+    const inp = cell.querySelector("input");
+    const key = cell.dataset.o;
+    formulaEl.textContent = inp ? (inp.value === "" ? "(empty: type a number)" : inp.value)
+      : key && formulas[key] ? formulas[key] : cell.textContent.trim();
+  };
+  if (table.dataset.xl) return; // listeners survive a rebuild of the rows
+  table.dataset.xl = "1";
+  table.addEventListener("click", (e) => table._xlShow(e.target.closest("td, th")));
+  table.addEventListener("focusin", (e) => table._xlShow(e.target.closest("td")));
+}
+document.querySelectorAll("#be-book .xl-tab").forEach((t) => t.addEventListener("click", () => {
+  document.querySelectorAll("#be-book .xl-tab").forEach((x) => x.classList.toggle("active", x === t));
+  document.querySelectorAll("#be-book .xl-sheet").forEach((s) => { s.hidden = s.dataset.sheet !== t.dataset.sheet; });
+  $("be-name").textContent = "A1"; $("be-formula").textContent = "";
+}));
+// What the main computed cells are, in words, for the formula bar.
+const BE_F = {
+  t_cut: "= Ticket price × Our cut %", t_pct: "= Ticket price × Stripe %", t_keep: "= Our cut − Stripe % − Stripe flat fee",
+  t_floor: "= Stripe flat fee ÷ (Our cut % − Stripe %)", t_refund: "= Stripe's fee on the ticket, which Stripe keeps on a refund",
+  r_total: "= SUM of every monthly cost above", r_total_t: "= Total every month ÷ what we keep per ticket", r_total_p: "= Total every month ÷ what we keep per Club plan",
+  r_in_tix: "= SUM(our 10% on tickets this month) − card fees", r_in_plans: "= SUM(monthly plans paying now)", r_left: "= Coming in this month − Total every month",
+  k_in: "= App tickets + Website tickets + Sponsors", k_out: "= Shirts + Drinks + Tip + Card fees", k_left: "= Total money in − Total money out",
+  k_need_app: "= Shortfall ÷ what one more app sign-up nets", k_need_web: "= Shortfall ÷ what one more website sign-up nets", k_need_sp: "= Shortfall",
+  m_left: "= Money in − Shirt costs − Card fees − Other − Upfront", m_per: "= Price − Cost per shirt − Card fee", m_need: "= Shortfall ÷ what one more shirt nets",
+};
 
 // ===== Break-even sheets (own page in the sidebar) =====
 // Saved numbers come from the two Google Sheets in the team@clubralley.com
@@ -2493,7 +2608,8 @@ function beBuild() {
     <tr class="total"><td colspan="3">Total money in</td>${o("k_in")}</tr>
     <tr class="sub"><td colspan="4"><b>Money out</b></td></tr>
     <tr><td>Shirts</td><td>${beCell("k5_shirts")}</td><td>${beCell("k5_shirt_cost")}</td>${o("k_shirts")}</tr>
-    <tr><td>Drink tickets (every sign-up, plus free spots: ${beCell("k5_free")})</td>${o("k_drinks_n")}<td>${beCell("k5_drink")}</td>${o("k_drinks")}</tr>
+    <tr><td>Free spots on the roster (the host, no ticket, still gets a drink)</td><td>${beCell("k5_free")}</td><td></td><td></td></tr>
+    <tr><td>Drink tickets (every sign-up plus free spots)</td>${o("k_drinks_n")}<td>${beCell("k5_drink")}</td>${o("k_drinks")}</tr>
     <tr><td>Tip on the drink tab, %</td><td></td><td>${beCell("k5_tip")}</td>${o("k_tip")}</tr>
     <tr><td>Stripe card fees on every ticket</td>${o("k_card_n")}<td></td>${o("k_card")}</tr>
     <tr class="total"><td colspan="3">Total money out</td>${o("k_out")}</tr>
@@ -2513,6 +2629,7 @@ function beBuild() {
     <tr class="sub"><td colspan="3">Each extra shirt nets</td>${o("m_per")}</tr>
     <tr class="sub"><td colspan="3">To break even: more shirts to sell</td>${o("m_need")}</tr>`;
 
+  ["be-ticket", "be-running", "be-5k", "be-merch"].forEach((id) => excelize($(id), $("be-name"), $("be-formula"), BE_F));
   document.querySelectorAll("input[data-be]").forEach((inp) => {
     inp.addEventListener("input", () => {
       const k = inp.dataset.be;
@@ -2553,7 +2670,7 @@ function beCompute() {
   total += refundLoss;
   out.r_m_refunds = beUsd(refundLoss); [out.r_t_refunds, out.r_p_refunds] = cover(refundLoss);
   out.r_total = beUsd(total); [out.r_total_t, out.r_total_p] = cover(total);
-  const tix = (CACHE.payments || []).filter((p) => p.status === "paid" && p.kind === "ralley_join" && thisMonth(p));
+  const tix = (CACHE.payments || []).filter((p) => p.status === "paid" && ["ralley_join", "ralley_guest"].includes(p.kind) && thisMonth(p));
   const inTix = tix.reduce((a, p) => a + (p.application_fee_cents || 0) / 100 - beCard(p.amount_cents / 100), 0);
   const inPlans = (CACHE.subscriptions || []).filter((s) => s.status === "active")
     .reduce((a, s) => a + (PLAN_PRICE_CENTS[s.plan] || 0) / 100, 0);
@@ -2608,7 +2725,107 @@ $("be-reset").addEventListener("click", () => {
   try { localStorage.removeItem(BE_KEY); } catch {}
   renderBreakeven();
 });
-$("d-be-merch").addEventListener("toggle", (e) => { if (e.target.open && !MERCH_LOADED) loadMerch(); });
+document.querySelector('#be-book .xl-tab[data-sheet="merch"]').addEventListener("click", () => { if (!MERCH_LOADED) loadMerch(); });
+
+
+// ===== Bank =====
+// Live from Stripe through founder-bank; the bank balance is typed in.
+// Saved starting point: $3,000 in the bank on 2026-10-13 (Ava, for the BVPC plan).
+const BANK_SAVED = { balance: 3000, as_of: "2026-10-13", other: 0 };
+const BANK_KEY = "bank:v1";
+let BANK_TYPED = {};
+try { BANK_TYPED = JSON.parse(localStorage.getItem(BANK_KEY) || "{}"); } catch {}
+let BANK_LOADED = false, BANK_DATA = null;
+const bankVal = (k) => (k in BANK_TYPED ? BANK_TYPED[k] : BANK_SAVED[k]);
+
+async function loadBank() {
+  BANK_LOADED = true;
+  show("bank-loading"); hide("bank-err");
+  try {
+    const { data, error } = await supabase.functions.invoke("founder-bank", { body: {} });
+    if (error) {
+      let msg = null;
+      try { const b = await error.context.json(); msg = b.error; } catch {}
+      throw new Error(msg ?? "Could not reach Stripe. Nothing changed; try Refresh.");
+    }
+    BANK_DATA = data;
+    renderBank();
+    hide("bank-loading"); $("bank-content").style.display = "flex";
+  } catch (err) {
+    hide("bank-loading");
+    $("bank-err").textContent = err.message;
+    show("bank-err");
+    BANK_LOADED = false;
+  }
+}
+
+function renderBank() {
+  const d = BANK_DATA; if (!d) return;
+  const accts = d.accounts ?? [];
+  const short = (a) => (a.id === "platform" ? "Platform" : "Events account");
+  const payouts = accts.flatMap((a) => (a.payouts ?? []).filter((p) => p.amount_cents > 0).map((p) => ({ ...p, from: short(a) })));
+  const day = (unix) => new Date(unix * 1000).toISOString().slice(0, 10);
+  const nice = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const bank = payouts.find((p) => p.bank)?.bank ?? "the bank";
+
+  const base = Number(bankVal("balance")) || 0, asOf = bankVal("as_of"), other = Number(bankVal("other")) || 0;
+  const landed = payouts.filter((p) => p.status === "paid" && day(p.arrival_date) > asOf).sort((a, b) => a.arrival_date - b.arrival_date);
+  const onWay = payouts.filter((p) => p.status === "in_transit" || p.status === "pending");
+  const landedSum = landed.reduce((a, p) => a + p.amount_cents, 0) / 100;
+  const est = base + landedSum + other;
+  const inStripe = accts.reduce((a, x) => a + (x.available_cents || 0) + (x.pending_cents || 0), 0) / 100;
+  const sentAll = payouts.filter((p) => p.status === "paid").reduce((a, p) => a + p.amount_cents, 0) / 100;
+
+  $("bk-bal").textContent = beUsd(est);
+  $("bk-bal-sub").textContent = `${bank} · ${beUsd(base)} on ${nice(asOf)} + ${beUsd(landedSum)} from Stripe since`;
+  $("bk-stripe").textContent = beUsd(inStripe);
+  $("bk-stripe-sub").textContent = onWay.length ? `${beUsd(onWay.reduce((a, p) => a + p.amount_cents, 0) / 100)} already on its way to the bank` : "reaches the bank about 2 business days after it is available";
+  $("bk-sent").textContent = beUsd(sentAll);
+  $("bk-sent-sub").textContent = `${payouts.filter((p) => p.status === "paid").length} Stripe payouts so far`;
+  $("bk-costs").textContent = BE_MONTH ? beUsd(BE_MONTH.total) : "—";
+
+  // Sheet 1: the ledger.
+  let run = base;
+  const cell = (k, type) => `<input class="cell" type="${type}" ${type === "number" ? 'step="any"' : ""} data-bk="${k}" value="${bankVal(k)}">`;
+  $("bk-ledger").innerHTML = `
+    <tr><th>Date</th><th>What</th><th>In</th><th>Out</th><th>Balance</th></tr>
+    <tr><td>${cell("as_of", "date")}</td><td>Bank balance from the Chase app (type it in)</td><td>${cell("balance", "number")}</td><td></td><td class="n">${beUsd(base)}</td></tr>
+    ${landed.map((p) => { run += p.amount_cents / 100; return `<tr><td>${nice(day(p.arrival_date))}</td><td>Stripe payout · ${p.from}</td><td class="n">${beUsd(p.amount_cents / 100)}</td><td></td><td class="n">${beUsd(run)}</td></tr>`; }).join("")}
+    <tr><td></td><td>Anything else in or out since then (negative for money out)</td><td>${cell("other", "number")}</td><td></td><td class="n">${beUsd(run + other)}</td></tr>
+    <tr class="total"><td></td><td>Estimated balance today</td><td></td><td></td><td class="n">${beUsd(est)}</td></tr>
+    ${onWay.map((p) => `<tr class="sub"><td>${nice(day(p.arrival_date))}</td><td>On the way from Stripe · ${p.from} (not counted yet)</td><td class="n">${beUsd(p.amount_cents / 100)}</td><td></td><td></td></tr>`).join("")}`;
+
+  // Sheet 2: what Stripe is holding.
+  $("bk-accounts").innerHTML = `
+    <tr><th>Stripe account</th><th>Ready to pay out</th><th>Still settling</th><th>Total</th></tr>
+    ${accts.map((a) => a.error
+      ? `<tr><td>${escapeHtml(a.label)}</td><td colspan="3" class="neg">Stripe said: ${escapeHtml(a.error)}</td></tr>`
+      : `<tr><td>${escapeHtml(a.label)}</td><td class="n">${beUsd(a.available_cents / 100)}</td><td class="n">${beUsd(a.pending_cents / 100)}</td><td class="n">${beUsd((a.available_cents + a.pending_cents) / 100)}</td></tr>`).join("")}
+    <tr class="total"><td>Both accounts</td><td></td><td></td><td class="n">${beUsd(inStripe)}</td></tr>`;
+
+  // Sheet 3: every payout.
+  const all = [...payouts].sort((a, b) => b.arrival_date - a.arrival_date);
+  const word = { paid: "In the bank", in_transit: "On the way", pending: "On the way", failed: "Failed", canceled: "Cancelled" };
+  $("bk-payouts").innerHTML = `
+    <tr><th>Arrives</th><th>From</th><th>Amount</th><th>Status</th><th>Bank</th></tr>
+    ${all.map((p) => `<tr><td>${nice(day(p.arrival_date))}</td><td>${p.from}</td><td class="n">${beUsd(p.amount_cents / 100)}</td><td>${word[p.status] ?? p.status}</td><td>${escapeHtml(p.bank ?? "")}</td></tr>`).join("") || `<tr><td colspan="5">No payouts yet.</td></tr>`}
+    <tr class="total"><td></td><td>Sent to the bank so far</td><td class="n">${beUsd(sentAll)}</td><td></td><td></td></tr>`;
+
+  const F = {};
+  ["bk-ledger", "bk-accounts", "bk-payouts"].forEach((id) => excelize($(id), $("bk-name"), $("bk-formula"), F));
+  document.querySelectorAll("input[data-bk]").forEach((inp) => inp.addEventListener("change", () => {
+    const k = inp.dataset.bk;
+    if (inp.value === "") delete BANK_TYPED[k]; else BANK_TYPED[k] = inp.type === "date" ? inp.value : Number(inp.value);
+    try { localStorage.setItem(BANK_KEY, JSON.stringify(BANK_TYPED)); } catch {}
+    renderBank();
+  }));
+  $("bk-fetched").textContent = `From Stripe at ${fmtDateTime(d.fetched_at)}. Refresh pulls new numbers.`;
+}
+document.querySelectorAll("#bk-book .xl-tab").forEach((t) => t.addEventListener("click", () => {
+  document.querySelectorAll("#bk-book .xl-tab").forEach((x) => x.classList.toggle("active", x === t));
+  document.querySelectorAll("#bk-book .xl-sheet").forEach((s) => { s.hidden = s.dataset.sheet !== t.dataset.sheet; });
+  $("bk-name").textContent = "A1"; $("bk-formula").textContent = "";
+}));
 
 // ===== Dropdowns: remember which ones this viewer keeps open =====
 document.querySelectorAll("details.drop[id]").forEach((d) => {
@@ -2621,12 +2838,13 @@ document.querySelectorAll(".tab").forEach((t) => {
   t.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
     t.classList.add("active");
-    ["home","finances","breakeven","users","ralleys","noshows","clubs","ambassadors","reports","reviews","instagram","merch"].forEach((name) => {
+    ["home","bank","finances","breakeven","users","ralleys","noshows","clubs","ambassadors","reports","reviews","instagram","merch"].forEach((name) => {
       $(`tab-${name}`).style.display = name === t.dataset.tab ? "" : "none";
     });
     // Instagram costs ~50 calls to Instagram, so it loads only when opened.
     if (t.dataset.tab === "instagram" && !IG_LOADED) loadInstagram();
     if (t.dataset.tab === "merch" && !MERCH_LOADED) loadMerch();
+    if (t.dataset.tab === "bank" && !BANK_LOADED) loadBank();
     setPageTitle(t);
     window.scrollTo(0, 0);
   });
