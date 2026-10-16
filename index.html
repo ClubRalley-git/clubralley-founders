@@ -84,6 +84,26 @@
   .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
   .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
   @media (max-width: 900px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+
+  /* Dropdowns: the headline numbers stay on top, everything else is opt-in. */
+  details.drop { background: var(--card); border: 1px solid var(--border); border-radius: 14px; margin-top: 12px; }
+  details.drop > summary {
+    cursor: pointer; list-style: none; padding: 14px 18px; display: flex; align-items: baseline; gap: 10px;
+    color: var(--brand-dark); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px;
+  }
+  details.drop > summary::-webkit-details-marker { display: none; }
+  details.drop > summary .hint { flex: 1; color: var(--muted); font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+  details.drop > summary::after { content: "▾"; font-size: 14px; transition: transform .15s; }
+  details.drop[open] > summary::after { transform: rotate(180deg); }
+  details.drop > summary:hover { background: var(--bg); border-radius: 14px; }
+  .drop-body { padding: 0 18px 18px; }
+  .drop-body .card { background: var(--bg); }
+  .drop-body .toolbar-row { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .drop-body .section-title:first-child { margin-top: 0; }
+  .explain { color: var(--muted); font-size: 12px; margin: 10px 2px 0; }
+  section > .err { background: var(--amber-bg); border: 1px solid var(--amber-border); color: var(--text); border-radius: 14px; padding: 16px 18px; font-size: 14px; line-height: 1.55; }
+  section > .err b { color: var(--amber); }
+  .item-card > summary .price { color: var(--muted); font-weight: 600; text-transform: none; letter-spacing: 0; }
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
   .card h2 { margin: 0 0 12px; font-size: 12px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--brand-dark); }
 
@@ -265,7 +285,7 @@
     <button class="tab" data-tab="reports">Reports <span id="reports-count"></span></button>
     <button class="tab" data-tab="reviews">Reviews <span id="reviews-count"></span></button>
     <button class="tab" data-tab="instagram">Instagram</button>
-    <button class="tab" data-tab="merch">Mockneck</button>
+    <button class="tab" data-tab="merch">Merch</button>
   </div>
 
   <!-- Overview -->
@@ -284,7 +304,7 @@
           <div class="sub">across all paid transactions</div>
         </div>
         <div class="kpi">
-          <div class="lbl">Active subs</div>
+          <div class="lbl">Paying Clubs &amp; Captains</div>
           <div class="num" id="kpi-subs">0</div>
           <div class="sub" id="kpi-subs-sub">—</div>
         </div>
@@ -294,23 +314,31 @@
           <div class="sub" id="kpi-users-sub">—</div>
         </div>
       </div>
+      <p class="explain"><b>Paying Clubs &amp; Captains</b> counts accounts on a monthly plan right now (this used to say "active subs"). The dollar line under it is what those plans bring in every month, called <b>MRR</b> (monthly recurring revenue).</p>
 
-      <div class="grid-2" style="margin-top: 16px">
-        <div class="card">
-          <h2>Users by role</h2>
-          <div id="users-by-role"></div>
+      <details class="drop" id="d-ov-activity">
+        <summary>Users and activity <span class="hint">players vs captains vs clubs, Ralleys, posts, photos</span></summary>
+        <div class="drop-body grid-2">
+          <div class="card"><h2>Users by role</h2><div id="users-by-role"></div></div>
+          <div class="card"><h2>Activity</h2><div id="activity-stats"></div></div>
         </div>
-        <div class="card">
-          <h2>Activity</h2>
-          <div id="activity-stats"></div>
+      </details>
+
+      <details class="drop" id="d-ov-signups">
+        <summary>Recent signups <span class="hint">the last 8 people to join</span></summary>
+        <div class="drop-body">
+          <div class="toolbar-row"><button class="btn" id="csv-signups">Export CSV</button></div>
+          <div id="signups-list"></div>
         </div>
-      </div>
+      </details>
 
-      <div class="section-title"><h3>Recent signups</h3><button class="btn" id="csv-signups">Export CSV</button></div>
-      <div id="signups-list"></div>
-
-      <div class="section-title"><h3>Recent payments</h3><button class="btn" id="csv-payments">Export CSV</button></div>
-      <div id="payments-list"></div>
+      <details class="drop" id="d-ov-payments">
+        <summary>Recent payments <span class="hint">the last 8 paid transactions</span></summary>
+        <div class="drop-body">
+          <div class="toolbar-row"><button class="btn" id="csv-payments">Export CSV</button></div>
+          <div id="payments-list"></div>
+        </div>
+      </details>
     </div>
   </section>
 
@@ -320,7 +348,7 @@
     <div id="fin-content" style="display:none">
       <div class="grid-4">
         <div class="kpi dark">
-          <div class="lbl">MRR (run-rate)</div>
+          <div class="lbl">Monthly plan income</div>
           <div class="num" id="fin-mrr">$0.00</div>
           <div class="sub" id="fin-mrr-sub">—</div>
         </div>
@@ -340,66 +368,66 @@
           <div class="sub" id="fin-all-sub">—</div>
         </div>
       </div>
+      <p class="explain"><b>Monthly plan income</b> (MRR) is what every Club and Captain on a monthly plan pays us each month, added up: Club $30, Captain $10. <b>Gross</b> is every paid ticket and plan before fees and refunds.</p>
 
-      <div class="grid-4" style="margin-top: 16px">
-        <div class="kpi"><div class="lbl">Platform fees</div><div class="num" id="fin-fees">$0.00</div><div class="sub">application_fee_cents on paid txns</div></div>
-        <div class="kpi"><div class="lbl">Net to captains/clubs</div><div class="num" id="fin-net">$0.00</div><div class="sub">gross − platform fees</div></div>
-        <div class="kpi"><div class="lbl">Refunded</div><div class="num" id="fin-refund">$0.00</div><div class="sub" id="fin-refund-sub">—</div></div>
-        <div class="kpi"><div class="lbl">Avg ticket</div><div class="num" id="fin-avg">$0.00</div><div class="sub" id="fin-avg-sub">—</div></div>
-      </div>
+      <details class="drop" id="d-fin-more">
+        <summary>Fees, refunds, average ticket <span class="hint">where the gross goes</span></summary>
+        <div class="drop-body grid-4">
+          <div class="kpi"><div class="lbl">Platform fees</div><div class="num" id="fin-fees">$0.00</div><div class="sub">our cut of paid tickets</div></div>
+          <div class="kpi"><div class="lbl">Net to captains/clubs</div><div class="num" id="fin-net">$0.00</div><div class="sub">gross − platform fees</div></div>
+          <div class="kpi"><div class="lbl">Refunded</div><div class="num" id="fin-refund">$0.00</div><div class="sub" id="fin-refund-sub">—</div></div>
+          <div class="kpi"><div class="lbl">Avg ticket</div><div class="num" id="fin-avg">$0.00</div><div class="sub" id="fin-avg-sub">—</div></div>
+        </div>
+      </details>
 
-      <div class="grid-2" style="margin-top: 16px">
-        <div class="card">
-          <h2>Subscriptions by plan</h2>
-          <div id="fin-subs-by-plan"></div>
+      <details class="drop" id="d-fin-charts">
+        <summary>Charts <span class="hint">plans, payment status, revenue by kind, last 12 months</span></summary>
+        <div class="drop-body">
+          <div class="grid-2">
+            <div class="card"><h2>Monthly plans</h2><div id="fin-subs-by-plan"></div></div>
+            <div class="card"><h2>Payments by status</h2><div id="fin-payments-by-status"></div></div>
+          </div>
+          <div class="grid-2" style="margin-top: 16px">
+            <div class="card"><h2>Revenue by kind</h2><div id="fin-by-kind"></div></div>
+            <div class="card"><h2>Revenue last 12 months</h2><svg class="chart" id="fin-chart" viewBox="0 0 600 140" preserveAspectRatio="none"></svg></div>
+          </div>
         </div>
-        <div class="card">
-          <h2>Payments by status</h2>
-          <div id="fin-payments-by-status"></div>
-        </div>
-      </div>
+      </details>
 
-      <div class="grid-2" style="margin-top: 16px">
-        <div class="card">
-          <h2>Revenue by kind</h2>
-          <div id="fin-by-kind"></div>
+      <details class="drop" id="d-fin-earners">
+        <summary>Top earners <span class="hint">captains and clubs by money received</span></summary>
+        <div class="drop-body">
+          <div class="table-scroll">
+            <table class="tbl" id="fin-top-earners-tbl"><thead></thead><tbody></tbody></table>
+          </div>
         </div>
-        <div class="card">
-          <h2>Revenue last 12 months</h2>
-          <svg class="chart" id="fin-chart" viewBox="0 0 600 140" preserveAspectRatio="none"></svg>
-        </div>
-      </div>
+      </details>
 
-      <div class="section-title">
-        <h3>Top earners (captains / clubs by net received)</h3>
-      </div>
-      <div class="table-scroll">
-        <table class="tbl" id="fin-top-earners-tbl"><thead></thead><tbody></tbody></table>
-      </div>
-
-      <div class="section-title">
-        <h3>All payments</h3>
-        <div class="toolbar">
-          <select id="fin-filter-status">
-            <option value="all">All statuses</option>
-            <option value="paid">Paid</option>
-            <option value="pending">Pending</option>
-            <option value="refunded">Refunded</option>
-            <option value="failed">Failed</option>
-          </select>
-          <select id="fin-filter-kind">
-            <option value="all">All kinds</option>
-            <option value="subscription">Subscription</option>
-            <option value="league_registration">League registration</option>
-            <option value="ralley_join">Ralley join</option>
-          </select>
-          <input class="search" id="fin-search" placeholder="Search payer name / username / email…" />
-          <button class="btn" id="csv-fin-payments">Export CSV</button>
+      <details class="drop" id="d-fin-payments">
+        <summary>All payments <span class="hint">every transaction, with filters and CSV</span></summary>
+        <div class="drop-body">
+          <div class="toolbar-row toolbar">
+            <select id="fin-filter-status">
+              <option value="all">All statuses</option>
+              <option value="paid">Paid</option>
+              <option value="pending">Pending</option>
+              <option value="refunded">Refunded</option>
+              <option value="failed">Failed</option>
+            </select>
+            <select id="fin-filter-kind">
+              <option value="all">All kinds</option>
+              <option value="subscription">Subscription</option>
+              <option value="league_registration">League registration</option>
+              <option value="ralley_join">Ralley join</option>
+            </select>
+            <input class="search" id="fin-search" placeholder="Search payer name / username / email…" />
+            <button class="btn" id="csv-fin-payments">Export CSV</button>
+          </div>
+          <div class="table-scroll">
+            <table class="tbl" id="fin-payments-tbl"><thead></thead><tbody></tbody></table>
+          </div>
         </div>
-      </div>
-      <div class="table-scroll">
-        <table class="tbl" id="fin-payments-tbl"><thead></thead><tbody></tbody></table>
-      </div>
+      </details>
     </div>
   </section>
 
@@ -414,55 +442,62 @@
         <div class="kpi"><div class="lbl">New last 30 days</div><div class="num" id="usr-30">0</div><div class="sub" id="usr-30-sub">—</div></div>
       </div>
 
-      <div class="grid-3" style="margin-top: 16px">
-        <div class="card"><h2>By role</h2><div id="usr-by-role"></div></div>
-        <div class="card"><h2>Onboarding funnel</h2><div id="usr-funnel"></div></div>
-        <div class="card"><h2>Verification</h2><div id="usr-verified"></div></div>
-      </div>
-
-      <div class="grid-2" style="margin-top: 16px">
-        <div class="card">
-          <h2>Signups last 30 days</h2>
-          <svg class="chart" id="usr-chart" viewBox="0 0 600 140" preserveAspectRatio="none"></svg>
+      <details class="drop" id="d-usr-who">
+        <summary>Who they are <span class="hint">role, onboarding, verification, signups chart</span></summary>
+        <div class="drop-body">
+          <div class="grid-3">
+            <div class="card"><h2>By role</h2><div id="usr-by-role"></div></div>
+            <div class="card"><h2>Onboarding funnel</h2><div id="usr-funnel"></div></div>
+            <div class="card"><h2>Verification</h2><div id="usr-verified"></div></div>
+          </div>
+          <div class="card" style="margin-top: 16px">
+            <h2>Signups last 30 days</h2>
+            <svg class="chart" id="usr-chart" viewBox="0 0 600 140" preserveAspectRatio="none"></svg>
+          </div>
         </div>
-        <div class="card">
-          <h2>Top cities</h2>
-          <div id="usr-by-city"></div>
+      </details>
+
+      <details class="drop" id="d-usr-where">
+        <summary>Where and what they play <span class="hint">top cities, sports, schools</span></summary>
+        <div class="drop-body grid-3">
+          <div class="card"><h2>Top cities</h2><div id="usr-by-city"></div></div>
+          <div class="card"><h2>Top sports</h2><div id="usr-by-sport"></div></div>
+          <div class="card"><h2>Top schools</h2><div id="usr-by-school"></div></div>
         </div>
-      </div>
+      </details>
 
-      <div class="grid-2" style="margin-top: 16px">
-        <div class="card"><h2>Top sports</h2><div id="usr-by-sport"></div></div>
-        <div class="card"><h2>Top schools</h2><div id="usr-by-school"></div></div>
-      </div>
-
-      <div class="grid-3" style="margin-top: 16px">
-        <div class="card"><h2>Top hosts (most ralleys)</h2><div id="usr-top-hosts"></div></div>
-        <div class="card"><h2>Top posters</h2><div id="usr-top-posters"></div></div>
-        <div class="card"><h2>Most followed</h2><div id="usr-top-followed"></div></div>
-      </div>
-
-      <div class="section-title">
-        <h3>All users</h3>
-        <div class="toolbar">
-          <select id="usr-filter-role">
-            <option value="all">All roles</option>
-            <option value="player">Player</option>
-            <option value="captain">Captain</option>
-            <option value="club">Club</option>
-          </select>
-          <select id="usr-filter-onboard">
-            <option value="all">All</option>
-            <option value="yes">Onboarded</option>
-            <option value="no">Not yet onboarded</option>
-          </select>
-          <input class="search" id="usr-search" placeholder="Search name / username / email / city…" />
-          <button class="btn" id="csv-users">Export CSV</button>
+      <details class="drop" id="d-usr-top">
+        <summary>Most active <span class="hint">top hosts, posters, most followed</span></summary>
+        <div class="drop-body grid-3">
+          <div class="card"><h2>Top hosts (most ralleys)</h2><div id="usr-top-hosts"></div></div>
+          <div class="card"><h2>Top posters</h2><div id="usr-top-posters"></div></div>
+          <div class="card"><h2>Most followed</h2><div id="usr-top-followed"></div></div>
         </div>
-      </div>
-      <div class="table-scroll">
-        <table class="tbl" id="usr-tbl"><thead></thead><tbody></tbody></table>
-      </div>
+      </details>
+
+      <details class="drop" id="d-usr-all">
+        <summary>All users <span class="hint">searchable list with CSV</span></summary>
+        <div class="drop-body">
+          <div class="toolbar-row toolbar">
+            <select id="usr-filter-role">
+              <option value="all">All roles</option>
+              <option value="player">Player</option>
+              <option value="captain">Captain</option>
+              <option value="club">Club</option>
+            </select>
+            <select id="usr-filter-onboard">
+              <option value="all">All</option>
+              <option value="yes">Onboarded</option>
+              <option value="no">Not yet onboarded</option>
+            </select>
+            <input class="search" id="usr-search" placeholder="Search name / username / email / city…" />
+            <button class="btn" id="csv-users">Export CSV</button>
+          </div>
+          <div class="table-scroll">
+            <table class="tbl" id="usr-tbl"><thead></thead><tbody></tbody></table>
+          </div>
+        </div>
+      </details>
     </div>
   </section>
 
@@ -477,42 +512,51 @@
         <div class="kpi"><div class="lbl">Past 30 days</div><div class="num" id="ral-past30">0</div><div class="sub" id="ral-past30-sub">—</div></div>
       </div>
 
-      <div class="grid-4" style="margin-top: 16px">
-        <div class="kpi"><div class="lbl">Total attendees</div><div class="num" id="ral-attendees">0</div><div class="sub" id="ral-attendees-sub">—</div></div>
-        <div class="kpi"><div class="lbl">Avg attendance</div><div class="num" id="ral-avg-attend">0</div><div class="sub">per ralley</div></div>
-        <div class="kpi"><div class="lbl">Avg fill rate</div><div class="num" id="ral-avg-fill">0%</div><div class="sub">attendees ÷ capacity</div></div>
-        <div class="kpi"><div class="lbl">Photos uploaded</div><div class="num" id="ral-photos">0</div><div class="sub">across all ralleys</div></div>
-      </div>
-
-      <div class="grid-3" style="margin-top: 16px">
-        <div class="card"><h2>By sport</h2><div id="ral-by-sport"></div></div>
-        <div class="card"><h2>By host role</h2><div id="ral-by-host-role"></div></div>
-        <div class="card"><h2>By visibility</h2><div id="ral-by-visibility"></div></div>
-      </div>
-
-      <div class="grid-2" style="margin-top: 16px">
-        <div class="card"><h2>Top cities</h2><div id="ral-by-city"></div></div>
-        <div class="card"><h2>Ralleys created last 30 days</h2><svg class="chart" id="ral-chart" viewBox="0 0 600 140" preserveAspectRatio="none"></svg></div>
-      </div>
-
-      <div class="section-title">
-        <h3>All ralleys</h3>
-        <div class="toolbar">
-          <select id="ral-filter-when">
-            <option value="all">All</option>
-            <option value="upcoming">Upcoming</option>
-            <option value="past">Past</option>
-          </select>
-          <select id="ral-filter-sport">
-            <option value="all">All sports</option>
-          </select>
-          <input class="search" id="ral-search" placeholder="Search title / location / host…" />
-          <button class="btn" id="csv-ralleys">Export CSV</button>
+      <details class="drop" id="d-ral-all" open>
+        <summary>All ralleys <span class="hint">click a Joined number for the sign-up list</span></summary>
+        <div class="drop-body">
+          <div class="toolbar-row toolbar">
+            <select id="ral-filter-when">
+              <option value="all">All</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="past">Past</option>
+            </select>
+            <select id="ral-filter-sport">
+              <option value="all">All sports</option>
+            </select>
+            <input class="search" id="ral-search" placeholder="Search title / location / host…" />
+            <button class="btn" id="csv-ralleys">Export CSV</button>
+          </div>
+          <div class="table-scroll">
+            <table class="tbl" id="ral-tbl"><thead></thead><tbody></tbody></table>
+          </div>
         </div>
-      </div>
-      <div class="table-scroll">
-        <table class="tbl" id="ral-tbl"><thead></thead><tbody></tbody></table>
-      </div>
+      </details>
+
+      <details class="drop" id="d-ral-attend">
+        <summary>Attendance <span class="hint">attendees, average turnout, fill rate, photos</span></summary>
+        <div class="drop-body grid-4">
+          <div class="kpi"><div class="lbl">Total attendees</div><div class="num" id="ral-attendees">0</div><div class="sub" id="ral-attendees-sub">—</div></div>
+          <div class="kpi"><div class="lbl">Avg attendance</div><div class="num" id="ral-avg-attend">0</div><div class="sub">per ralley</div></div>
+          <div class="kpi"><div class="lbl">Avg fill rate</div><div class="num" id="ral-avg-fill">0%</div><div class="sub">attendees ÷ capacity</div></div>
+          <div class="kpi"><div class="lbl">Photos uploaded</div><div class="num" id="ral-photos">0</div><div class="sub">across all ralleys</div></div>
+        </div>
+      </details>
+
+      <details class="drop" id="d-ral-charts">
+        <summary>Breakdowns <span class="hint">by sport, host, visibility, city, last 30 days</span></summary>
+        <div class="drop-body">
+          <div class="grid-3">
+            <div class="card"><h2>By sport</h2><div id="ral-by-sport"></div></div>
+            <div class="card"><h2>By host role</h2><div id="ral-by-host-role"></div></div>
+            <div class="card"><h2>By visibility</h2><div id="ral-by-visibility"></div></div>
+          </div>
+          <div class="grid-2" style="margin-top: 16px">
+            <div class="card"><h2>Top cities</h2><div id="ral-by-city"></div></div>
+            <div class="card"><h2>Ralleys created last 30 days</h2><svg class="chart" id="ral-chart" viewBox="0 0 600 140" preserveAspectRatio="none"></svg></div>
+          </div>
+        </div>
+      </details>
     </div>
     <div class="roster-overlay hidden" id="roster-overlay">
       <div class="roster-panel" role="dialog" aria-modal="true" aria-labelledby="roster-title">
@@ -528,7 +572,6 @@
     </div>
   </section>
 
-  <!-- Pending Clubs -->
   <!-- No-shows. Fed by ralley_attendees.attended, which a HOST sets by hand
        after the Ralley. Three states, and unmarked is not absent: most
        Ralleys never get a roll call, so only attended = false counts here.
@@ -544,18 +587,19 @@
         <div class="kpi"><div class="lbl">Ralleys with a roll call</div><div class="num" id="ns-marked">0</div><div class="sub" id="ns-marked-sub">—</div></div>
       </div>
 
-      <div class="card" style="margin-top:16px">
-        <h2>Repeat no-shows</h2>
-        <div id="ns-people-table"></div>
-      </div>
+      <details class="drop" id="d-ns-people">
+        <summary>Repeat no-shows <span class="hint">people who missed more than once</span></summary>
+        <div class="drop-body"><div id="ns-people-table"></div></div>
+      </details>
 
-      <div class="card" style="margin-top:16px">
-        <h2>Every no-show</h2>
-        <div id="ns-rows-table"></div>
-      </div>
+      <details class="drop" id="d-ns-rows">
+        <summary>Every no-show</summary>
+        <div class="drop-body"><div id="ns-rows-table"></div></div>
+      </details>
     </div>
   </section>
 
+  <!-- Pending Clubs -->
   <section id="tab-clubs" style="display:none">
     <div class="loading" id="clubs-loading">Loading…</div>
     <div id="clubs-content" style="display:none"></div>
@@ -616,7 +660,7 @@
   <!-- Instagram (read-only, via /api/instagram; the token never reaches this page) -->
   <section id="tab-instagram" style="display:none">
     <div class="loading" id="ig-loading">Loading Instagram…</div>
-    <div class="err" id="ig-err" style="display:none; color:var(--red); font-size:13px"></div>
+    <div class="err" id="ig-err" style="display:none"></div>
     <div id="ig-content" style="display:none">
       <div class="grid-4">
         <div class="kpi dark"><div class="lbl">Followers</div><div class="num" id="ig-followers">0</div><div class="sub" id="ig-followers-sub">—</div></div>
@@ -625,39 +669,70 @@
         <div class="kpi"><div class="lbl">Link-in-bio taps · 7 days</div><div class="num" id="ig-clicks7">0</div><div class="sub" id="ig-clicks28">—</div></div>
       </div>
 
-      <div class="grid-2" style="margin-top: 16px">
-        <div class="card"><h2>Average reach by post type</h2><div id="ig-by-type"></div></div>
-        <div class="card"><h2>Followers by age</h2><div id="ig-age"></div></div>
-      </div>
-      <div class="grid-2" style="margin-top: 16px">
-        <div class="card"><h2>Top follower cities</h2><div id="ig-city"></div></div>
-        <div class="card"><h2>Followers by gender</h2><div id="ig-gender"></div><p class="meta" id="ig-demo-note" style="font-size:11px; color:var(--muted); margin:12px 0 0"></p></div>
-      </div>
+      <details class="drop" id="d-ig-posts">
+        <summary>Every post, by reach <span class="hint">with app sign-ups in the 2 days after</span></summary>
+        <div class="drop-body">
+          <div class="toolbar-row"><button class="btn" id="csv-ig">Export CSV</button></div>
+          <p style="font-size:12px; color:var(--muted); margin:0 0 8px">"App sign-ups within 2 days" counts new app accounts in the 48 hours after the post went up. It shows timing only; it does not prove the post caused them.</p>
+          <div class="table-scroll"><table class="tbl" id="ig-posts-tbl"><thead></thead><tbody></tbody></table></div>
+        </div>
+      </details>
 
-      <div class="section-title"><h3>Every post, by reach</h3><button class="btn" id="csv-ig">Export CSV</button></div>
-      <p style="font-size:12px; color:var(--muted); margin:0 0 8px">"App sign-ups within 2 days" counts new app accounts in the 48 hours after the post went up. It shows timing only; it does not prove the post caused them.</p>
-      <div class="table-scroll"><table class="tbl" id="ig-posts-tbl"><thead></thead><tbody></tbody></table></div>
+      <details class="drop" id="d-ig-audience">
+        <summary>Audience <span class="hint">post types, follower ages, cities, gender</span></summary>
+        <div class="drop-body">
+          <div class="grid-2">
+            <div class="card"><h2>Average reach by post type</h2><div id="ig-by-type"></div></div>
+            <div class="card"><h2>Followers by age</h2><div id="ig-age"></div></div>
+          </div>
+          <div class="grid-2" style="margin-top: 16px">
+            <div class="card"><h2>Top follower cities</h2><div id="ig-city"></div></div>
+            <div class="card"><h2>Followers by gender</h2><div id="ig-gender"></div><p class="meta" id="ig-demo-note" style="font-size:11px; color:var(--muted); margin:12px 0 0"></p></div>
+          </div>
+        </div>
+      </details>
       <p style="font-size:11px; color:var(--muted); margin-top:10px" id="ig-fetched"></p>
     </div>
   </section>
 
-  <!-- Mockneck preorder (Stripe Payment Links, read via founder-merch-orders) -->
+  <!-- Merch. One dropdown per item; Mockneck is the first. Orders come from
+       Stripe Payment Links via the founder-merch-orders Edge Function. -->
   <section id="tab-merch" style="display:none">
     <div class="loading" id="merch-loading">Loading orders from Stripe…</div>
-    <div class="err" id="merch-err" style="display:none; color:var(--red); font-size:13px"></div>
+    <div class="err" id="merch-err" style="display:none"></div>
     <div id="merch-content" style="display:none">
-      <div class="grid-4">
-        <div class="kpi dark"><div class="lbl">Shirts ordered</div><div class="num" id="merch-count">0</div><div class="sub" id="merch-count-sub">—</div></div>
-        <div class="kpi"><div class="lbl">Money in</div><div class="num" id="merch-gross">$0.00</div><div class="sub" id="merch-gross-sub">—</div></div>
-        <div class="kpi"><div class="lbl">Mailroom pickup</div><div class="num" id="merch-mail">0</div><div class="sub">Bucknell mailbox</div></div>
-        <div class="kpi"><div class="lbl">Shipping</div><div class="num" id="merch-ship">0</div><div class="sub">mailed to an address</div></div>
+      <div class="card">
+        <h2>Items</h2>
+        <p class="explain" style="margin-top:0">Each item opens to show its orders, sizes and money. Mockneck is the only item so far.</p>
       </div>
-      <div class="grid-2" style="margin-top: 16px">
-        <div class="card"><h2>Shirts by size</h2><div id="merch-sizes"></div></div>
-        <div class="card"><h2>Links</h2><div id="merch-links"></div></div>
-      </div>
-      <div class="section-title"><h3>Every order, newest first</h3><button class="btn" id="csv-merch">Export CSV</button></div>
-      <div class="table-scroll"><table class="tbl" id="merch-tbl"><thead></thead><tbody></tbody></table></div>
+
+      <details class="drop item-card" id="d-merch-mockneck" open>
+        <summary>Mockneck <span class="price" id="merch-item-line"></span><span class="hint"></span></summary>
+        <div class="drop-body">
+          <div class="grid-4">
+            <div class="kpi dark"><div class="lbl">Shirts ordered</div><div class="num" id="merch-count">0</div><div class="sub" id="merch-count-sub">—</div></div>
+            <div class="kpi"><div class="lbl">Money in</div><div class="num" id="merch-gross">$0.00</div><div class="sub" id="merch-gross-sub">—</div></div>
+            <div class="kpi"><div class="lbl">Mailroom pickup</div><div class="num" id="merch-mail">0</div><div class="sub">Bucknell mailbox</div></div>
+            <div class="kpi"><div class="lbl">Shipping</div><div class="num" id="merch-ship">0</div><div class="sub">mailed to an address</div></div>
+          </div>
+
+          <details class="drop" id="d-merch-sizes">
+            <summary>Sizes and order links</summary>
+            <div class="drop-body grid-2">
+              <div class="card"><h2>Shirts by size</h2><div id="merch-sizes"></div></div>
+              <div class="card"><h2>Links</h2><div id="merch-links"></div></div>
+            </div>
+          </details>
+
+          <details class="drop" id="d-merch-orders">
+            <summary>Every order <span class="hint">newest first, with mailbox or address</span></summary>
+            <div class="drop-body">
+              <div class="toolbar-row"><button class="btn" id="csv-merch">Export CSV</button></div>
+              <div class="table-scroll"><table class="tbl" id="merch-tbl"><thead></thead><tbody></tbody></table></div>
+            </div>
+          </details>
+        </div>
+      </details>
       <p style="font-size:11px; color:var(--muted); margin-top:10px" id="merch-fetched"></p>
     </div>
   </section>
@@ -841,7 +916,7 @@ function renderOverview() {
   $("kpi-month-sub").textContent = `${paid.filter((p) => (p.paid_at ?? p.created_at) >= monthStart).length} paid txns this month`;
   $("kpi-alltime").textContent = fmtUSD(allRev);
   $("kpi-subs").textContent = String(activeSubs.length);
-  $("kpi-subs-sub").textContent = `MRR ${fmtUSD(activeSubs.reduce((a, s) => a + (PLAN_PRICE_CENTS[s.plan] || 0), 0))}`;
+  $("kpi-subs-sub").textContent = `${fmtUSD(activeSubs.reduce((a, s) => a + (PLAN_PRICE_CENTS[s.plan] || 0), 0))} a month (MRR)`;
   $("kpi-users").textContent = `${fmtNum(CACHE.users.length)} · ${fmtNum(onboarded.length)}`;
   $("kpi-users-sub").textContent = `${fmtPct(onboarded.length, CACHE.users.length)} onboarded`;
 
@@ -897,7 +972,7 @@ function renderFinances() {
   const mrr = activeSubs.reduce((a, s) => a + (PLAN_PRICE_CENTS[s.plan] || 0), 0);
 
   $("fin-mrr").textContent = fmtUSD(mrr);
-  $("fin-mrr-sub").textContent = `${activeSubs.length} active subscriptions`;
+  $("fin-mrr-sub").textContent = `${activeSubs.length} Club${activeSubs.length === 1 ? "" : "s"} / Captain${activeSubs.length === 1 ? "" : "s"} on a monthly plan`;
   $("fin-month").textContent = fmtUSD(monthRev);
   $("fin-month-sub").textContent = `${paid.filter((p) => (p.paid_at ?? p.created_at) >= monthStart).length} paid this month`;
   $("fin-30").textContent = fmtUSD(rev30);
@@ -917,7 +992,7 @@ function renderFinances() {
   $("fin-subs-by-plan").innerHTML = renderBars(
     Object.entries(subsByPlan).map(([k, v]) => [labelPlan(k), v])
   ) + renderBars(
-    Object.entries(subsByStatus).map(([k, v]) => [`status: ${k}`, v])
+    Object.entries(subsByStatus).map(([k, v]) => [k === "active" ? "Paying now" : k === "canceled" ? "Cancelled" : k.replace(/_/g, " "), v])
   );
 
   // Payments by status
@@ -1932,7 +2007,7 @@ async function loadInstagram(fresh = false) {
   } catch (err) {
     // A network failure (no response at all) is different from Instagram saying no.
     hide("ig-loading");
-    $("ig-err").textContent = err instanceof TypeError ? "Could not reach the dashboard server. Nothing is wrong with Instagram; try Refresh." : err.message;
+    $("ig-err").innerHTML = err instanceof TypeError ? "Could not reach the dashboard server. Nothing is wrong with Instagram; try Refresh." : escapeHtml(err.message).replace(/^([^.]+\.)/, "<b>$1</b>");
     show("ig-err");
     IG_LOADED = false;
   }
@@ -2000,7 +2075,7 @@ $("csv-ig").addEventListener("click", () => {
   a.download = `clubralley-instagram-${todayIso()}.csv`; a.click();
 });
 
-// ===== Mockneck preorder =====
+// ===== Merch (Mockneck is the first item) =====
 // Orders come from Stripe through the founder-merch-orders Edge Function;
 // these sales never touch our database.
 let MERCH_LOADED = false;
@@ -2033,6 +2108,7 @@ function renderMerch(d) {
   const shirts = live.reduce((a, o) => a + (o.quantity || 1), 0);
   const refunded = MERCH_ORDERS.filter((o) => o.refunded).length;
   $("merch-count").textContent = fmtNum(shirts);
+  $("merch-item-line").textContent = `${fmtNum(shirts)} sold · ${fmtUSD(live.reduce((a, o) => a + o.amount_cents, 0))}`;
   $("merch-count-sub").textContent = `${fmtNum(live.length)} orders` + (refunded ? ` · ${refunded} refunded, not counted` : "");
   const gross = live.reduce((a, o) => a + o.amount_cents, 0);
   const ship = live.reduce((a, o) => a + o.shipping_cents, 0);
@@ -2075,6 +2151,12 @@ $("csv-merch").addEventListener("click", () => {
     mailbox: o.mailbox, address: o.address ? [o.address.line1, o.address.line2, o.address.city, o.address.state, o.address.postal_code].filter(Boolean).join(", ") : "",
     phone: o.phone, email: o.email, paid: o.amount_cents / 100, status: o.refunded ? "refunded" : o.paid ? "paid" : "not paid",
   })));
+});
+
+// ===== Dropdowns: remember which ones this viewer keeps open =====
+document.querySelectorAll("details.drop[id]").forEach((d) => {
+  try { const v = localStorage.getItem("drop:" + d.id); if (v !== null) d.open = v === "1"; } catch {}
+  d.addEventListener("toggle", () => { try { localStorage.setItem("drop:" + d.id, d.open ? "1" : "0"); } catch {} });
 });
 
 // ===== Tabs =====

@@ -99,6 +99,11 @@ module.exports = async (req, res) => {
   } catch (err) {
     // 190 = expired/invalid token: say so plainly, it is the likeliest failure in December.
     const expired = err.code === 190;
+    // 200 + "API access blocked" = Meta has switched off the "Club Ralley Insights"
+    // app itself (the key still parses; an invalid key gives a different error).
+    // Nothing in this code can fix that; it is cleared in Meta's developer site.
+    const blocked = err.code === 200 && /blocked/i.test(err.message);
+    if (blocked) return res.status(502).json({ code: "app_blocked", error: "Instagram has switched off our access. Meta is refusing every request from the Club Ralley Insights app, not just this page (the Mac's daily Instagram job has failed the same way since Oct 13). The key itself is fine. This has to be cleared by logging in at developers.facebook.com, opening the Club Ralley Insights app, and reading the alert there. Nothing on the dashboard can fix it." });
     return res.status(502).json({ error: expired ? "The Instagram key has expired. Renew it (see README)." : "Instagram said: " + err.message, code: expired ? "token_expired" : "ig_error" });
   }
 };
