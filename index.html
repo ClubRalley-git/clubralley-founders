@@ -6,15 +6,17 @@
 <meta name="robots" content="noindex,nofollow" />
 <title>Club Ralley — Founder Dashboard</title>
 <link rel="icon" href="data:," />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&display=swap" rel="stylesheet" />
 <style>
   :root {
     --brand-dark: #2C4F40;
     --brand-light: #E2E4D6;
-    --bg: #fafaf7;
+    --bg: #F5F6F2;
     --card: #ffffff;
-    --text: #111;
-    --muted: #6b7280;
-    --border: #e5e7eb;
+    --text: #17211C;
+    --muted: #5E6B63;
+    --border: #E3E6DF;
     --red: #dc2626;
     --amber: #b45309;
     --amber-bg: #FFF7E6;
@@ -26,38 +28,80 @@
   html, body {
     margin: 0; padding: 0;
     background: var(--bg); color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Helvetica Neue", Arial, sans-serif;
+    font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
     line-height: 1.5;
   }
   a { color: var(--brand-dark); }
-  .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 24px 64px; }
-
-  /* Top bar */
-  .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-  .topbar .tag {
-    background: var(--brand-dark); color: #fff;
-    font-size: 11px; font-weight: 800; letter-spacing: 1.4px;
-    padding: 4px 10px; border-radius: 999px;
+  /* Shell: grouped sidebar + main column (design A, 2026-10-16) */
+  .shell { display: flex; flex-wrap: wrap; min-height: 100vh; }
+  .side {
+    flex: 1 1 220px; max-width: 248px; background: #fff; border-right: 1px solid var(--border);
+    padding: 26px 16px; display: flex; flex-direction: column; gap: 22px;
   }
-  .topbar h1 { font-size: 22px; margin: 0; color: var(--brand-dark); letter-spacing: -0.4px; }
-  .topbar .spacer { flex: 1; }
-  .topbar .who { font-size: 12px; color: var(--muted); }
-  .topbar button.logout {
-    background: transparent; border: 1px solid var(--border);
-    color: var(--text); padding: 6px 10px; border-radius: 999px;
-    font-size: 12px; cursor: pointer;
-  }
-  .topbar button.logout:hover { background: #f3f4f6; }
-
-  /* Tabs */
-  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 22px; overflow-x: auto; }
+  .side .brand { display: flex; align-items: center; gap: 10px; padding: 0 6px; }
+  .side .brand .mark { width: 34px; height: 34px; border-radius: 10px; background: var(--brand-dark); color: var(--brand-light); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
+  .side .brand b { display: block; font-size: 15px; }
+  .side .brand span { font-size: 12px; color: var(--muted); }
+  .side nav { display: flex; flex-direction: column; gap: 20px; }
+  .side .group { display: flex; flex-direction: column; gap: 2px; }
+  .side .group-label { font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted); padding: 0 12px 6px; }
   .tab {
-    padding: 10px 14px; cursor: pointer; font-size: 13px; font-weight: 700; white-space: nowrap;
-    color: var(--muted); border: none; background: transparent;
-    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%;
+    padding: 9px 12px; border-radius: 10px; border: 0; background: transparent; cursor: pointer;
+    font: inherit; font-size: 14px; color: var(--text); text-align: left; white-space: nowrap;
   }
-  .tab:hover { color: var(--brand-dark); }
-  .tab.active { color: var(--brand-dark); border-bottom-color: var(--brand-dark); }
+  .tab:hover { background: var(--bg); }
+  .tab.active { background: var(--brand-light); color: #1B3328; font-weight: 700; }
+  .tab .count { font-size: 11px; font-weight: 800; padding: 1px 8px; border-radius: 999px; background: var(--border); color: var(--text); }
+  .tab .count.urgent { background: #B8321F; color: #fff; }
+  .tab .count:empty { display: none; }
+  .side .foot { margin-top: auto; padding: 12px 6px 0; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+  .side .who { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+  .side button.logout { align-self: flex-start; background: transparent; border: 1px solid var(--border); color: var(--text); padding: 7px 12px; border-radius: 999px; font: inherit; font-size: 12px; cursor: pointer; }
+  .main { flex: 999 1 560px; min-width: 0; padding: 34px 40px 64px; max-width: 1240px; }
+  .page-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 24px; }
+  .page-head .date { font-size: 13px; color: var(--muted); }
+  .page-head h1 { margin: 4px 0 0; font-size: 30px; font-weight: 800; letter-spacing: -0.6px; color: var(--text); }
+  @media (max-width: 760px) {
+    .side { max-width: none; flex-basis: 100%; padding: 14px 12px; gap: 10px; border-right: 0; border-bottom: 1px solid var(--border); }
+    .side nav { display: flex; gap: 4px; overflow-x: auto; }
+    .side .group { flex-direction: row; gap: 4px; }
+    .side .group-label { display: none; }
+    .side .foot { display: none; }
+    .tab { width: auto; }
+    .main { padding: 20px 16px 48px; }
+  }
+
+  /* Home */
+  .home-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .home-kpi { background: #fff; border: 1px solid var(--border); border-radius: 16px; padding: 20px 22px; }
+  .home-kpi.dark { background: var(--brand-dark); border-color: var(--brand-dark); color: #fff; }
+  .home-kpi .lbl { font-size: 13px; color: var(--muted); }
+  .home-kpi.dark .lbl, .home-kpi.dark .sub { color: var(--brand-light); }
+  .home-kpi .num { font-size: 40px; font-weight: 800; letter-spacing: -1px; margin-top: 4px; color: #1B3328; }
+  .home-kpi.dark .num { color: #fff; }
+  .home-kpi .sub { font-size: 13px; color: var(--muted); }
+  .meter { height: 8px; border-radius: 4px; background: var(--border); margin-top: 8px; overflow: hidden; }
+  .meter > div { height: 100%; background: var(--brand-dark); }
+  .panel { background: #fff; border: 1px solid var(--border); border-radius: 16px; }
+  .panel > h2 { margin: 0; padding: 18px 22px 8px; font-size: 16px; font-weight: 800; color: var(--text); }
+  .panel > h2 span { color: var(--muted); font-weight: 500; font-size: 14px; }
+  .inbox-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 22px; border-top: 1px solid #EEF0EB; }
+  .inbox-row .dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+  .inbox-row .what { flex: 1 1 280px; }
+  .inbox-row .what b { font-size: 15px; }
+  .inbox-row .what div { font-size: 13px; color: var(--muted); }
+  .btn-solid { font: inherit; font-size: 14px; font-weight: 700; padding: 10px 16px; border-radius: 10px; border: 0; background: var(--brand-dark); color: #fff; cursor: pointer; }
+  .btn-line { font: inherit; font-size: 14px; font-weight: 700; padding: 10px 16px; border-radius: 10px; border: 1px solid #C9CEC4; background: #fff; color: var(--text); cursor: pointer; }
+  .inbox-empty { padding: 14px 22px 20px; color: var(--muted); font-size: 14px; }
+  .home-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+  .spark { display: flex; align-items: flex-end; gap: 6px; height: 140px; padding: 8px 22px 0; }
+  .spark div { flex: 1; background: var(--brand-dark); border-radius: 4px 4px 0 0; min-height: 2px; position: relative; }
+  .spark div.old { background: #C9D4C8; }
+  .spark-axis { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); padding: 8px 22px 18px; }
+  .up-row { display: flex; justify-content: space-between; gap: 12px; padding: 11px 22px; border-top: 1px solid #EEF0EB; font-size: 14px; }
+  .up-row span.when { color: var(--muted); }
+  .linkbtn { background: none; border: 0; padding: 12px 22px 18px; font: inherit; font-size: 14px; font-weight: 700; color: var(--brand-dark); cursor: pointer; text-decoration: underline; }
 
   /* Login */
   .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
@@ -118,11 +162,11 @@
   .sheet-note { color: var(--muted); font-size: 12px; margin: 8px 2px 0; }
   .sheet-wrap { overflow-x: auto; }
   .item-card > summary .price { color: var(--muted); font-weight: 600; text-transform: none; letter-spacing: 0; }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; }
   .card h2 { margin: 0 0 12px; font-size: 12px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--brand-dark); }
 
   /* Hero numbers */
-  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
+  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; }
   .kpi .lbl { color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; }
   .kpi .num { color: var(--brand-dark); font-size: 26px; font-weight: 800; margin-top: 4px; letter-spacing: -0.4px; }
   .kpi .sub { color: var(--muted); font-size: 11px; margin-top: 2px; }
@@ -278,32 +322,86 @@
 </div>
 
 <!-- App -->
-<div id="app" class="wrap" style="display:none">
-  <div class="topbar">
-    <span class="tag">FOUNDER</span>
-    <h1>Dashboard</h1>
-    <div class="spacer"></div>
-    <button class="btn" id="refresh-btn" type="button">Refresh</button>
-    <div class="who" id="who"></div>
-    <button class="logout" id="logout-btn">Sign out</button>
+<div id="app" class="shell" style="display:none">
+  <aside class="side">
+    <div class="brand"><div class="mark">CR</div><div><b>Club Ralley</b><span>Founders</span></div></div>
+    <nav id="tabs" aria-label="Dashboard sections">
+      <div class="group">
+        <button class="tab active" data-tab="home" type="button">Home <span class="count urgent" id="home-count"></span></button>
+      </div>
+      <div class="group">
+        <div class="group-label">People</div>
+        <button class="tab" data-tab="users" type="button">Players</button>
+        <button class="tab" data-tab="ralleys" type="button">Ralleys</button>
+        <button class="tab" data-tab="ambassadors" type="button">Ambassadors <span class="count urgent" id="amb-count"></span></button>
+        <button class="tab" data-tab="noshows" type="button">No-shows <span class="count" id="noshow-count"></span></button>
+      </div>
+      <div class="group">
+        <div class="group-label">Money</div>
+        <button class="tab" data-tab="finances" type="button">Finances</button>
+        <button class="tab" data-tab="breakeven" type="button">Break-even</button>
+        <button class="tab" data-tab="merch" type="button">Merch</button>
+      </div>
+      <div class="group">
+        <div class="group-label">Safety</div>
+        <button class="tab" data-tab="reports" type="button">Reports <span class="count urgent" id="reports-count"></span></button>
+        <button class="tab" data-tab="clubs" type="button">Pending Clubs <span class="count urgent" id="clubs-count"></span></button>
+        <button class="tab" data-tab="reviews" type="button">Reviews <span class="count" id="reviews-count"></span></button>
+      </div>
+      <div class="group">
+        <div class="group-label">Marketing</div>
+        <button class="tab" data-tab="instagram" type="button">Instagram</button>
+      </div>
+    </nav>
+    <div class="foot">
+      <div class="who" id="who"></div>
+      <button class="logout" id="logout-btn" type="button">Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+  <div class="page-head">
+    <div><div class="date" id="page-date"></div><h1 id="page-title">Good morning</h1></div>
+    <button class="btn-line" id="refresh-btn" type="button">Refresh</button>
   </div>
 
-  <div class="tabs" id="tabs">
-    <button class="tab active" data-tab="overview">Overview</button>
-    <button class="tab" data-tab="finances">Finances</button>
-    <button class="tab" data-tab="users">Users</button>
-    <button class="tab" data-tab="ralleys">Ralleys</button>
-    <button class="tab" data-tab="noshows">No-shows <span id="noshow-count"></span></button>
-    <button class="tab" data-tab="clubs">Pending Clubs <span id="clubs-count"></span></button>
-    <button class="tab" data-tab="ambassadors">Ambassadors<span class="redcount" id="amb-count"></span></button>
-    <button class="tab" data-tab="reports">Reports <span id="reports-count"></span></button>
-    <button class="tab" data-tab="reviews">Reviews <span id="reviews-count"></span></button>
-    <button class="tab" data-tab="instagram">Instagram</button>
-    <button class="tab" data-tab="merch">Merch</button>
-  </div>
+  <!-- Home: the three numbers, what needs a founder, new players, what is coming up. -->
+  <section id="tab-home">
+    <div class="loading" id="home-loading">Loading…</div>
+    <div id="home-content" style="display:none; flex-direction:column; gap:20px">
+      <div class="home-kpis">
+        <div class="home-kpi dark"><div class="lbl">Players</div><div class="num" id="h-players">0</div><div class="sub" id="h-players-sub">—</div></div>
+        <div class="home-kpi"><div class="lbl">Tickets this month</div><div class="num" id="h-tix">0</div><div class="sub" id="h-tix-sub">—</div></div>
+        <div class="home-kpi"><div class="lbl">Monthly costs covered</div><div class="num" id="h-cover">0%</div><div class="meter"><div id="h-cover-bar" style="width:0%"></div></div><div class="sub" id="h-cover-sub" style="margin-top:6px">—</div></div>
+      </div>
+
+      <section class="panel" aria-labelledby="h-inbox-title">
+        <h2 id="h-inbox-title">Needs you <span id="h-inbox-n"></span></h2>
+        <div id="h-inbox"></div>
+      </section>
+
+      <div class="home-cols">
+        <section class="panel">
+          <h2>New players, last 14 days</h2>
+          <div class="spark" id="h-spark" aria-hidden="true"></div>
+          <div class="spark-axis" id="h-spark-axis"></div>
+        </section>
+        <section class="panel">
+          <h2>Coming up</h2>
+          <div id="h-upcoming"></div>
+          <button class="linkbtn" type="button" data-go="ralleys">All Ralleys</button>
+        </section>
+      </div>
+
+      <details class="drop" id="d-home-more" style="margin-top:0">
+        <summary>More numbers <span class="hint">gross money, monthly plans, users by role, recent signups and payments</span></summary>
+        <div class="drop-body" id="home-more"></div>
+      </details>
+    </div>
+  </section>
 
   <!-- Overview -->
-  <section id="tab-overview">
+  <section id="tab-overview" style="display:none">
     <div class="loading" id="overview-loading">Loading…</div>
     <div id="overview-content" style="display:none">
       <div class="grid-4">
@@ -384,33 +482,6 @@
       </div>
       <p class="explain"><b>Monthly plan income</b> (MRR) is what every Club and Captain on a monthly plan pays us each month, added up: Club $30, Captain $10. <b>Gross</b> is every paid ticket and plan before fees and refunds.</p>
 
-      <details class="drop" id="d-fin-breakeven" open>
-        <summary>Break-even sheets <span class="hint">every cost, big and little, and how much has to come in to cover it</span></summary>
-        <div class="drop-body">
-          <p class="sheet-note" style="margin:0 0 6px">Yellow cells can be typed in and everything recalculates. Red cells are costs nobody has written down yet, so they are counted as $0 until filled in. What you type stays on this computer only; <button class="btn" id="be-reset" type="button" style="padding:2px 8px; font-size:11px">Reset to the saved numbers</button></p>
-
-          <details class="drop" id="d-be-ticket" open>
-            <summary>1 · What we keep from one ticket</summary>
-            <div class="drop-body sheet-wrap"><table class="sheet" id="be-ticket"></table></div>
-          </details>
-
-          <details class="drop" id="d-be-running" open>
-            <summary>2 · Running costs every month <span class="hint">apps, servers, accounts, payouts</span></summary>
-            <div class="drop-body sheet-wrap"><table class="sheet" id="be-running"></table><p class="sheet-note" id="be-running-note"></p></div>
-          </details>
-
-          <details class="drop" id="d-be-5k">
-            <summary>3 · Homecoming 5K <span class="hint">tickets, sponsors, shirts, drinks, card fees</span></summary>
-            <div class="drop-body sheet-wrap"><table class="sheet" id="be-5k"></table><p class="sheet-note" id="be-5k-note"></p></div>
-          </details>
-
-          <details class="drop" id="d-be-merch">
-            <summary>4 · Mockneck <span class="hint">shirts, cost per shirt, shipping, card fees</span></summary>
-            <div class="drop-body sheet-wrap"><table class="sheet" id="be-merch"></table><p class="sheet-note" id="be-merch-note"></p></div>
-          </details>
-        </div>
-      </details>
-
       <details class="drop" id="d-fin-more">
         <summary>Fees, refunds, average ticket <span class="hint">where the gross goes</span></summary>
         <div class="drop-body grid-4">
@@ -470,6 +541,33 @@
         </div>
       </details>
     </div>
+  </section>
+
+  <!-- Break-even: one sheet per thing that costs money -->
+  <section id="tab-breakeven" style="display:none">
+      <div id="be-page">
+          <p class="sheet-note" style="margin:0 0 6px">Yellow cells can be typed in and everything recalculates. Red cells are costs nobody has written down yet, so they are counted as $0 until filled in. What you type stays on this computer only; <button class="btn" id="be-reset" type="button" style="padding:2px 8px; font-size:11px">Reset to the saved numbers</button></p>
+
+          <details class="drop" id="d-be-ticket" open>
+            <summary>1 · What we keep from one ticket</summary>
+            <div class="drop-body sheet-wrap"><table class="sheet" id="be-ticket"></table></div>
+          </details>
+
+          <details class="drop" id="d-be-running" open>
+            <summary>2 · Running costs every month <span class="hint">apps, servers, accounts, payouts</span></summary>
+            <div class="drop-body sheet-wrap"><table class="sheet" id="be-running"></table><p class="sheet-note" id="be-running-note"></p></div>
+          </details>
+
+          <details class="drop" id="d-be-5k">
+            <summary>3 · Homecoming 5K <span class="hint">tickets, sponsors, shirts, drinks, card fees</span></summary>
+            <div class="drop-body sheet-wrap"><table class="sheet" id="be-5k"></table><p class="sheet-note" id="be-5k-note"></p></div>
+          </details>
+
+          <details class="drop" id="d-be-merch">
+            <summary>4 · Mockneck <span class="hint">shirts, cost per shirt, shipping, card fees</span></summary>
+            <div class="drop-body sheet-wrap"><table class="sheet" id="be-merch"></table><p class="sheet-note" id="be-merch-note"></p></div>
+          </details>
+      </div>
   </section>
 
   <!-- Users -->
@@ -778,6 +876,7 @@
     </div>
   </section>
 
+  </main>
 </div>
 
 <script type="module">
@@ -943,6 +1042,7 @@ async function loadOverview() {
   // Same race for reviews — the rater's @handle comes from CACHE.users, so a
   // list rendered before the cache lands shows "—" for everyone.
   if (reviewsCache.length) renderReviews();
+  renderHome();
 }
 
 function renderOverview() {
@@ -1284,7 +1384,7 @@ function renderNoShows() {
   const markedRalleyIds = new Set(marked.map((a) => a.ralley_id));
 
   const badge = $("noshow-count");
-  if (badge) badge.textContent = noShows.length ? `(${noShows.length})` : "";
+  if (badge) badge.textContent = noShows.length || "";
 
   $("ns-total").textContent = fmtNum(noShows.length);
   $("ns-total-sub").textContent = `out of ${fmtNum(marked.length)} marked sign-ups`;
@@ -1524,7 +1624,9 @@ async function loadPendingClubs() {
   container.innerHTML = "";
   if (error) { loading.innerHTML = `<div class="errbox">Couldn't load pending clubs: ${escapeHtml(error.message)}</div>`; return; }
   const items = data ?? [];
-  $("clubs-count").textContent = items.length ? `· ${items.length}` : "";
+  $("clubs-count").textContent = items.length || "";
+  PENDING_CLUBS = items;
+  renderInbox();
   if (!items.length) {
     container.innerHTML = `<div class="empty"><h3>Nothing in the queue.</h3><p>New Club applications show up here for review.</p></div>`;
   } else {
@@ -1648,6 +1750,7 @@ async function loadAmbassadors() {
 function renderAmbassadors() {
   const unseen = ambCache.filter((r) => !r.seen_at);
   $("amb-count").textContent = unseen.length ? String(unseen.length) : "";
+  renderInbox();
   const count = (st) => ambCache.filter((r) => r.status === st).length;
   $("amb-new").textContent = count("new");
   $("amb-contacted").textContent = count("contacted");
@@ -1743,8 +1846,9 @@ async function loadReports() {
   }
   reportsCache = data ?? [];
   const openCount = reportsCache.filter((r) => r.status === "open").length;
-  $("reports-count").textContent = openCount ? `· ${openCount}` : "";
+  $("reports-count").textContent = openCount || "";
   renderReports();
+  renderInbox();
   hide("reports-loading"); show("reports-content");
 }
 
@@ -1864,7 +1968,7 @@ $("tab-reports").addEventListener("click", async (e) => {
   if (error) { alert("Update failed: " + error.message); return; }
   reportsCache = reportsCache.map((r) => r.id === id ? { ...r, status } : r);
   const openCount = reportsCache.filter((r) => r.status === "open").length;
-  $("reports-count").textContent = openCount ? `· ${openCount}` : "";
+  $("reports-count").textContent = openCount || "";
   renderReports();
 });
 
@@ -1932,7 +2036,7 @@ async function loadReviews() {
   ].sort((a, b) => String(b.at).localeCompare(String(a.at)));
 
   const withComment = reviewsCache.filter((r) => r.comment && r.comment.trim()).length;
-  $("reviews-count").textContent = withComment ? `· ${withComment}` : "";
+  $("reviews-count").textContent = withComment || "";
 
   renderReviewKpis();
   renderReviews();
@@ -2196,7 +2300,90 @@ $("csv-merch").addEventListener("click", () => {
   })));
 });
 
-// ===== Break-even sheets (Finances tab) =====
+// ===== Home =====
+// The three numbers, what needs a founder, new players, what is coming up.
+let PENDING_CLUBS = [];
+
+function renderInbox() {
+  const ago = (iso) => {
+    const hrs = Math.round((Date.now() - Date.parse(iso)) / 3600000);
+    return hrs < 48 ? `${hrs} hour${hrs === 1 ? "" : "s"} ago` : `${Math.round(hrs / 24)} days ago`;
+  };
+  const rows = [];
+  const open = reportsCache.filter((r) => r.status === "open");
+  if (open.length) {
+    const oldest = open.reduce((a, r) => (r.created_at < a.created_at ? r : a));
+    rows.push({ color: "#B8321F", title: `${open.length} report${open.length === 1 ? " is" : "s are"} open`,
+      sub: `Oldest was filed ${ago(oldest.created_at)}`, go: "reports", label: "Review", solid: true });
+  }
+  const review = PENDING_CLUBS.filter((c) => c.application_status !== "awaiting_payment");
+  review.slice(0, 3).forEach((c) => rows.push({ color: "#C77A0A",
+    title: `${c.club_name ?? "A Club"} wants to join as a Club`,
+    sub: [c.club_city, c.contact_name].filter(Boolean).join(" · ") || "Waiting for review",
+    go: "clubs", label: "Review", solid: true }));
+  if (review.length > 3) rows.push({ color: "#C77A0A", title: `${review.length - 3} more Clubs waiting`, sub: "", go: "clubs", label: "Open" });
+  const unseen = ambCache.filter((r) => !r.seen_at);
+  if (unseen.length) rows.push({ color: "#C77A0A", title: `${unseen.length} new ambassador request${unseen.length === 1 ? "" : "s"}`,
+    sub: [...new Set(unseen.map((r) => r.place_label).filter(Boolean))].slice(0, 4).join(", "), go: "ambassadors", label: "Open" });
+
+  $("home-count").textContent = rows.length || "";
+  $("h-inbox-n").textContent = rows.length ? `· ${rows.length} thing${rows.length === 1 ? "" : "s"}` : "";
+  $("h-inbox").innerHTML = rows.length ? rows.map((r) => `
+    <div class="inbox-row">
+      <div class="dot" style="background:${r.color}"></div>
+      <div class="what"><b>${escapeHtml(r.title)}</b>${r.sub ? `<div>${escapeHtml(r.sub)}</div>` : ""}</div>
+      <button type="button" class="${r.solid ? "btn-solid" : "btn-line"}" data-go="${r.go}">${r.label}</button>
+    </div>`).join("")
+    : `<div class="inbox-empty">Nothing needs you right now.</div>`;
+}
+
+function renderHome() {
+  const users = CACHE.users || [];
+  const week = daysAgoIso(7);
+  $("h-players").textContent = fmtNum(users.length);
+  $("h-players-sub").textContent = `+${fmtNum(users.filter((u) => u.created_at >= week).length)} this week`;
+
+  const monthStart = startOfMonthIso();
+  const tix = (CACHE.payments || []).filter((p) => p.status === "paid" && p.kind === "ralley_join" && (p.paid_at ?? p.created_at) >= monthStart);
+  const gross = tix.reduce((a, p) => a + p.amount_cents, 0);
+  const kept = tix.reduce((a, p) => a + (p.application_fee_cents || 0) / 100 - beCard(p.amount_cents / 100), 0);
+  $("h-tix").textContent = fmtNum(tix.length);
+  $("h-tix-sub").textContent = `${fmtUSD(gross)} paid · we kept ${beUsd(kept)} after card fees`;
+
+  if (BE_MONTH && BE_MONTH.total > 0) {
+    const pct = Math.round(BE_MONTH.kept / BE_MONTH.total * 100);
+    $("h-cover").textContent = pct + "%";
+    $("h-cover-bar").style.width = Math.min(100, Math.max(0, pct)) + "%";
+    const gap = BE_MONTH.total - BE_MONTH.kept;
+    $("h-cover-sub").innerHTML = (gap > 0 ? `${beUsd(gap)} short of ${beUsd(BE_MONTH.total)} this month` : `${beUsd(-gap)} over ${beUsd(BE_MONTH.total)} this month`)
+      + (BE_MONTH.unknown ? ` · <button class="linkbtn" style="padding:0; font-size:13px" type="button" data-go="breakeven">${BE_MONTH.unknown} costs not filled in</button>` : "");
+  }
+
+  // New players per day, last 14 days; the last 7 drawn darker.
+  const days = [...Array(14)].map((_, i) => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - 13 + i); return d; });
+  const counts = days.map((d) => { const e = new Date(d); e.setDate(e.getDate() + 1); return users.filter((u) => { const t = new Date(u.created_at); return t >= d && t < e; }).length; });
+  const max = Math.max(1, ...counts);
+  $("h-spark").innerHTML = counts.map((c, i) => `<div class="${i < 7 ? "old" : ""}" style="height:${Math.round(c / max * 100)}%" title="${c}"></div>`).join("");
+  const md = (d) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  $("h-spark-axis").innerHTML = `<span>${md(days[0])}</span><span>This week: ${fmtNum(counts.slice(7).reduce((a, b) => a + b, 0))}</span><span>${md(days[13])}</span>`;
+
+  // Next 5 Ralleys, with sign-ups (players + no-account guests).
+  const now = new Date().toISOString();
+  const going = {};
+  (CACHE.attendees || []).forEach((a) => { going[a.ralley_id] = (going[a.ralley_id] || 0) + 1; });
+  (CACHE.guests || []).forEach((g) => { going[g.ralley_id] = (going[g.ralley_id] || 0) + 1; });
+  const sportName = {}; (CACHE.sports || []).forEach((s) => { sportName[s.id] = s.name; });
+  const up = (CACHE.ralleys || []).filter((r) => r.starts_at >= now).sort((a, b) => a.starts_at.localeCompare(b.starts_at)).slice(0, 5);
+  $("h-upcoming").innerHTML = up.length ? up.map((r) => `
+    <div class="up-row"><span><b>${escapeHtml(r.title ?? "Ralley")}</b><br><span class="when">${new Date(r.starts_at).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}${sportName[r.sport_id] ? " · " + escapeHtml(sportName[r.sport_id]) : ""}</span></span>
+    <b>${fmtNum(going[r.id] || 0)}${r.capacity ? " / " + fmtNum(r.capacity) : " going"}</b></div>`).join("")
+    : `<div class="inbox-empty">Nothing on the calendar yet.</div>`;
+
+  renderInbox();
+  hide("home-loading"); $("home-content").style.display = "flex";
+}
+
+// ===== Break-even sheets (own page in the sidebar) =====
 // Saved numbers come from the two Google Sheets in the team@clubralley.com
 // Drive ("Club Ralley Finances" and "Homecoming 5k Finances", 2026-10-12) and
 // the fee in create-checkout-session. null = nobody has written it down yet:
@@ -2215,6 +2402,7 @@ const BE_KEY = "be:v1";
 let BE_TYPED = {};
 try { BE_TYPED = JSON.parse(localStorage.getItem(BE_KEY) || "{}"); } catch {}
 let BE_LIVE = {};
+let BE_MONTH = null;
 
 function beVal(k) { if (k in BE_TYPED) return BE_TYPED[k]; if (BE_LIVE[k] != null) return BE_LIVE[k]; return BE_SAVED[k]; }
 const beN = (k) => Number(beVal(k)) || 0;
@@ -2370,6 +2558,7 @@ function beCompute() {
   const inPlans = (CACHE.subscriptions || []).filter((s) => s.status === "active")
     .reduce((a, s) => a + (PLAN_PRICE_CENTS[s.plan] || 0) / 100, 0);
   const left = inTix + inPlans - total;
+  BE_MONTH = { total, kept: inTix + inPlans, unknown: BE_RUNNING.filter(([k, , , m]) => m && beVal(k) == null).length };
   out.r_in_tix = beSigned(inTix); out.r_in_plans = beUsd(inPlans); out.r_left = beSigned(left);
   [out.r_left_t, out.r_left_p] = left >= 0 ? ['<span class="pos">covered</span>', '<span class="pos">covered</span>'] : cover(-left);
   const unknown = BE_RUNNING.filter(([k, , , m]) => m && beVal(k) == null).length;
@@ -2432,14 +2621,30 @@ document.querySelectorAll(".tab").forEach((t) => {
   t.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
     t.classList.add("active");
-    ["overview","finances","users","ralleys","noshows","clubs","ambassadors","reports","reviews","instagram","merch"].forEach((name) => {
+    ["home","finances","breakeven","users","ralleys","noshows","clubs","ambassadors","reports","reviews","instagram","merch"].forEach((name) => {
       $(`tab-${name}`).style.display = name === t.dataset.tab ? "" : "none";
     });
     // Instagram costs ~50 calls to Instagram, so it loads only when opened.
     if (t.dataset.tab === "instagram" && !IG_LOADED) loadInstagram();
     if (t.dataset.tab === "merch" && !MERCH_LOADED) loadMerch();
+    setPageTitle(t);
+    window.scrollTo(0, 0);
   });
 });
+document.addEventListener("click", (e) => {
+  const go = e.target.closest("[data-go]");
+  if (go) document.querySelector(`.tab[data-tab="${go.dataset.go}"]`)?.click();
+});
+function setPageTitle(t) {
+  const h = new Date().getHours();
+  $("page-title").textContent = t.dataset.tab === "home"
+    ? (h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening")
+    : t.childNodes[0].textContent.trim();
+}
+$("page-date").textContent = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+setPageTitle(document.querySelector(".tab.active"));
+// The old Overview tab lives on inside Home's "More numbers" dropdown.
+while ($("tab-overview").firstChild) $("home-more").appendChild($("tab-overview").firstChild);
 
 // ===== Helpers: aggregation + rendering =====
 function groupCount(items, keyFn) {
