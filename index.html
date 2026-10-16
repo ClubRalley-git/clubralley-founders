@@ -103,6 +103,20 @@
   .explain { color: var(--muted); font-size: 12px; margin: 10px 2px 0; }
   section > .err { background: var(--amber-bg); border: 1px solid var(--amber-border); color: var(--text); border-radius: 14px; padding: 16px 18px; font-size: 14px; line-height: 1.55; }
   section > .err b { color: var(--amber); }
+  /* Break-even sheets: look like a spreadsheet, yellow cells are typed in. */
+  table.sheet { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
+  table.sheet th, table.sheet td { border: 1px solid var(--border); padding: 6px 9px; text-align: left; vertical-align: middle; }
+  table.sheet th { background: var(--bg); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  table.sheet td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.sheet tr.total td { font-weight: 800; background: var(--brand-light); color: var(--brand-dark); }
+  table.sheet tr.result td { font-weight: 800; }
+  table.sheet tr.sub td { color: var(--muted); font-size: 12px; }
+  table.sheet input.cell { width: 86px; text-align: right; font: inherit; border: 1px solid var(--amber-border); background: #FFF6C9; border-radius: 4px; padding: 3px 6px; }
+  table.sheet input.cell.fill { border-color: var(--red); background: #FDECEC; }
+  table.sheet input.cell.fill::placeholder { color: var(--red); font-weight: 700; }
+  .pos { color: var(--green); } .neg { color: var(--red); }
+  .sheet-note { color: var(--muted); font-size: 12px; margin: 8px 2px 0; }
+  .sheet-wrap { overflow-x: auto; }
   .item-card > summary .price { color: var(--muted); font-weight: 600; text-transform: none; letter-spacing: 0; }
   .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
   .card h2 { margin: 0 0 12px; font-size: 12px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: var(--brand-dark); }
@@ -369,6 +383,33 @@
         </div>
       </div>
       <p class="explain"><b>Monthly plan income</b> (MRR) is what every Club and Captain on a monthly plan pays us each month, added up: Club $30, Captain $10. <b>Gross</b> is every paid ticket and plan before fees and refunds.</p>
+
+      <details class="drop" id="d-fin-breakeven" open>
+        <summary>Break-even sheets <span class="hint">every cost, big and little, and how much has to come in to cover it</span></summary>
+        <div class="drop-body">
+          <p class="sheet-note" style="margin:0 0 6px">Yellow cells can be typed in and everything recalculates. Red cells are costs nobody has written down yet, so they are counted as $0 until filled in. What you type stays on this computer only; <button class="btn" id="be-reset" type="button" style="padding:2px 8px; font-size:11px">Reset to the saved numbers</button></p>
+
+          <details class="drop" id="d-be-ticket" open>
+            <summary>1 · What we keep from one ticket</summary>
+            <div class="drop-body sheet-wrap"><table class="sheet" id="be-ticket"></table></div>
+          </details>
+
+          <details class="drop" id="d-be-running" open>
+            <summary>2 · Running costs every month <span class="hint">apps, servers, accounts, payouts</span></summary>
+            <div class="drop-body sheet-wrap"><table class="sheet" id="be-running"></table><p class="sheet-note" id="be-running-note"></p></div>
+          </details>
+
+          <details class="drop" id="d-be-5k">
+            <summary>3 · Homecoming 5K <span class="hint">tickets, sponsors, shirts, drinks, card fees</span></summary>
+            <div class="drop-body sheet-wrap"><table class="sheet" id="be-5k"></table><p class="sheet-note" id="be-5k-note"></p></div>
+          </details>
+
+          <details class="drop" id="d-be-merch">
+            <summary>4 · Mockneck <span class="hint">shirts, cost per shirt, shipping, card fees</span></summary>
+            <div class="drop-body sheet-wrap"><table class="sheet" id="be-merch"></table><p class="sheet-note" id="be-merch-note"></p></div>
+          </details>
+        </div>
+      </details>
 
       <details class="drop" id="d-fin-more">
         <summary>Fees, refunds, average ticket <span class="hint">where the gross goes</span></summary>
@@ -1070,6 +1111,7 @@ function renderFinances() {
   search.oninput = applyFinFilters;
   applyFinFilters();
   $("csv-fin-payments").onclick = () => downloadCsv(`payments_${todayIso()}.csv`, finRows);
+  renderBreakeven();
 
   hide("fin-loading"); show("fin-content");
 }
@@ -2143,6 +2185,7 @@ function renderMerch(d) {
     : `<tr><td colspan="8" class="meta">No orders yet.</td></tr>`;
 
   $("merch-fetched").textContent = `From Stripe at ${fmtDateTime(d.fetched_at)}. Refresh pulls new orders.`;
+  if (CACHE.payments) renderBreakeven();
 }
 
 $("csv-merch").addEventListener("click", () => {
@@ -2152,6 +2195,231 @@ $("csv-merch").addEventListener("click", () => {
     phone: o.phone, email: o.email, paid: o.amount_cents / 100, status: o.refunded ? "refunded" : o.paid ? "paid" : "not paid",
   })));
 });
+
+// ===== Break-even sheets (Finances tab) =====
+// Saved numbers come from the two Google Sheets in the team@clubralley.com
+// Drive ("Club Ralley Finances" and "Homecoming 5k Finances", 2026-10-12) and
+// the fee in create-checkout-session. null = nobody has written it down yet:
+// it shows as a red FILL IN and counts as $0 until someone types it.
+// Where the app has the real figure (5K tickets, Mockneck orders) it wins
+// over the saved one, and anything typed on the page wins over both.
+const BE_SAVED = {
+  ticket_price: 10, take_rate: 10, stripe_pct: 2.9, stripe_fixed: 0.30, plan_price: 30,
+  supabase: 25, resend: 20, apple_yr: 99, play_once: 25,
+  vercel: null, expo: null, domain_yr: null, workspace: null, amb: null, insurance_yr: null, accounting_yr: null,
+  k5_app: 52, k5_app_price: 10, k5_web: 5, k5_web_price: 15, k5_sponsors: 600, k5_free: 1,
+  k5_shirts: 120, k5_shirt_cost: 10.44, k5_drink: 3, k5_tip: 20,
+  mn_sold: 0, mn_price: null, mn_cost: null, mn_other: null, mn_setup: null,
+};
+const BE_KEY = "be:v1";
+let BE_TYPED = {};
+try { BE_TYPED = JSON.parse(localStorage.getItem(BE_KEY) || "{}"); } catch {}
+let BE_LIVE = {};
+
+function beVal(k) { if (k in BE_TYPED) return BE_TYPED[k]; if (BE_LIVE[k] != null) return BE_LIVE[k]; return BE_SAVED[k]; }
+const beN = (k) => Number(beVal(k)) || 0;
+function beCell(k) {
+  const v = beVal(k), fill = v == null || v === "";
+  const live = !(k in BE_TYPED) && BE_LIVE[k] != null;
+  return `<input class="cell${fill ? " fill" : ""}" type="number" step="any" min="0" data-be="${k}" value="${fill ? "" : v}" placeholder="${fill ? "FILL IN" : ""}"${live ? ' title="Filled in from the app"' : ""}>`;
+}
+const beUsd = (n) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+const beSigned = (n) => `<span class="${n < 0 ? "neg" : "pos"}">${beUsd(n)}</span>`;
+const o = (k) => `<td class="n" data-o="${k}"></td>`;
+// How many more of something it takes to cover a gap, when each one brings in `per`.
+function beNeed(gap, per) {
+  if (gap <= 0) return '<span class="pos">covered</span>';
+  if (per <= 0) return '<span class="neg">never (each one loses money)</span>';
+  return fmtNum(Math.ceil(gap / per));
+}
+const beCard = (price) => price * beN("stripe_pct") / 100 + beN("stripe_fixed");
+const beKeep = (price) => price * beN("take_rate") / 100 - beCard(price);   // our 10%, minus Stripe's fee, which we pay
+const bePlanKeep = () => beN("plan_price") - beCard(beN("plan_price"));
+
+const BE_RUNNING = [
+  // key, what it is, how it is billed, months per bill (0 = one-time, not monthly)
+  ["supabase", "Supabase Pro (database, logins, photos)", "monthly", 1],
+  ["resend", "Resend Pro (app emails)", "monthly", 1],
+  ["apple_yr", "Apple Developer (App Store listing)", "yearly", 12],
+  ["vercel", "Vercel (website and this dashboard)", "monthly", 1],
+  ["expo", "Expo / EAS (app builds and updates)", "monthly", 1],
+  ["domain_yr", "clubralley.com domain", "yearly", 12],
+  ["workspace", "Google Workspace (team@clubralley.com)", "monthly", 1],
+  ["amb", "Ambassador payouts ($20 per 100 players who joined a Ralley)", "monthly", 1],
+  ["insurance_yr", "Event insurance (not bought yet; the plan budgets $2,000 a year)", "yearly", 12],
+  ["accounting_yr", "Accounting and state fees (the plan budgets $1,500 a year)", "yearly", 12],
+  ["play_once", "Google Play developer account", "one-time, already paid", 0],
+];
+
+function beLiveData() {
+  BE_LIVE = {};
+  const paid = (CACHE.payments || []).filter((p) => p.status === "paid");
+  // Homecoming 5K: the 5K Ralley with the most paid tickets (it was reposted once).
+  const fiveK = (CACHE.ralleys || []).filter((r) => /5\s?k/i.test(r.title || ""))
+    .map((r) => ({ r, n: paid.filter((p) => p.related_ralley_id === r.id).length }))
+    .sort((a, b) => b.n - a.n)[0];
+  if (fiveK && fiveK.n) {
+    const t = paid.filter((p) => p.related_ralley_id === fiveK.r.id);
+    const app = t.filter((p) => !p.guest_id), web = t.filter((p) => p.guest_id);
+    const avg = (xs) => xs.length ? xs.reduce((a, p) => a + p.amount_cents, 0) / xs.length / 100 : null;
+    BE_LIVE.k5_app = app.length; BE_LIVE.k5_web = web.length;
+    if (app.length) BE_LIVE.k5_app_price = Math.round(avg(app) * 100) / 100;
+    if (web.length) BE_LIVE.k5_web_price = Math.round(avg(web) * 100) / 100;
+    BE_LIVE._k5_title = fiveK.r.title;
+  }
+  if (MERCH_ORDERS.length) {
+    const live = MERCH_ORDERS.filter((x) => x.paid && !x.refunded);
+    const shirts = live.reduce((a, x) => a + (x.quantity || 1), 0);
+    BE_LIVE.mn_sold = shirts;
+    if (shirts) BE_LIVE.mn_price = Math.round(live.reduce((a, x) => a + x.amount_cents - (x.shipping_cents || 0), 0) / shirts) / 100;
+  }
+}
+
+function beBuild() {
+  $("be-ticket").innerHTML = `
+    <tr><th>Line</th><th>Number</th><th>Dollars</th></tr>
+    <tr><td>Ticket price</td><td>${beCell("ticket_price")}</td>${o("t_price")}</tr>
+    <tr><td>Our cut, % of the ticket</td><td>${beCell("take_rate")}</td>${o("t_cut")}</tr>
+    <tr><td>Stripe's card fee, % of the ticket</td><td>${beCell("stripe_pct")}</td>${o("t_pct")}</tr>
+    <tr><td>Stripe's card fee, flat per ticket</td><td>${beCell("stripe_fixed")}</td>${o("t_fixed")}</tr>
+    <tr class="result"><td>We keep per ticket</td><td></td>${o("t_keep")}</tr>
+    <tr class="sub"><td colspan="2">Lowest ticket price where we keep anything</td>${o("t_floor")}</tr>
+    <tr class="sub"><td colspan="2">A refunded ticket costs us (Stripe keeps its fee)</td>${o("t_refund")}</tr>
+    <tr class="sub"><td>Club plan price, per month</td><td>${beCell("plan_price")}</td>${o("t_plan")}</tr>`;
+
+  $("be-running").innerHTML = `
+    <tr><th>Cost</th><th>Billed</th><th>Price</th><th>Per month</th><th>Tickets a month to cover it</th><th>Club plans to cover it</th></tr>
+    ${BE_RUNNING.map(([k, label, how]) => `<tr><td>${escapeHtml(label)}</td><td>${how}</td><td>${beCell(k)}</td>${o("r_m_" + k)}${o("r_t_" + k)}${o("r_p_" + k)}</tr>`).join("")}
+    <tr><td>Card fees Stripe kept on refunds this month</td><td>from the app</td><td></td>${o("r_m_refunds")}${o("r_t_refunds")}${o("r_p_refunds")}</tr>
+    <tr class="total"><td colspan="3">Total every month</td>${o("r_total")}${o("r_total_t")}${o("r_total_p")}</tr>
+    <tr class="sub"><td colspan="3">Coming in this month: our cut of tickets after card fees</td>${o("r_in_tix")}<td colspan="2"></td></tr>
+    <tr class="sub"><td colspan="3">Coming in this month: monthly plans (MRR)</td>${o("r_in_plans")}<td colspan="2"></td></tr>
+    <tr class="result"><td colspan="3">Left over this month</td>${o("r_left")}${o("r_left_t")}${o("r_left_p")}</tr>`;
+
+  $("be-5k").innerHTML = `
+    <tr><th>Line</th><th>Count</th><th>Price</th><th>Total</th></tr>
+    <tr class="sub"><td colspan="4"><b>Money in</b></td></tr>
+    <tr><td>Tickets bought in the app</td><td>${beCell("k5_app")}</td><td>${beCell("k5_app_price")}</td>${o("k_app")}</tr>
+    <tr><td>Tickets bought on the website</td><td>${beCell("k5_web")}</td><td>${beCell("k5_web_price")}</td>${o("k_web")}</tr>
+    <tr><td>Sponsors</td><td></td><td>${beCell("k5_sponsors")}</td>${o("k_sp")}</tr>
+    <tr class="total"><td colspan="3">Total money in</td>${o("k_in")}</tr>
+    <tr class="sub"><td colspan="4"><b>Money out</b></td></tr>
+    <tr><td>Shirts</td><td>${beCell("k5_shirts")}</td><td>${beCell("k5_shirt_cost")}</td>${o("k_shirts")}</tr>
+    <tr><td>Drink tickets (every sign-up, plus free spots: ${beCell("k5_free")})</td>${o("k_drinks_n")}<td>${beCell("k5_drink")}</td>${o("k_drinks")}</tr>
+    <tr><td>Tip on the drink tab, %</td><td></td><td>${beCell("k5_tip")}</td>${o("k_tip")}</tr>
+    <tr><td>Stripe card fees on every ticket</td>${o("k_card_n")}<td></td>${o("k_card")}</tr>
+    <tr class="total"><td colspan="3">Total money out</td>${o("k_out")}</tr>
+    <tr class="result"><td colspan="3">Left over</td>${o("k_left")}</tr>
+    <tr class="sub"><td colspan="3">To break even: more app sign-ups (each nets ${"<span data-o-inline='k_per_app'></span>"})</td>${o("k_need_app")}</tr>
+    <tr class="sub"><td colspan="3">or more website sign-ups (each nets <span data-o-inline="k_per_web"></span>)</td>${o("k_need_web")}</tr>
+    <tr class="sub"><td colspan="3">or more sponsor money</td>${o("k_need_sp")}</tr>`;
+
+  $("be-merch").innerHTML = `
+    <tr><th>Line</th><th>Count</th><th>Price</th><th>Total</th></tr>
+    <tr><td>Shirts sold</td><td>${beCell("mn_sold")}</td><td>${beCell("mn_price")}</td>${o("m_in")}</tr>
+    <tr><td>What each shirt costs us</td>${o("m_cost_n")}<td>${beCell("mn_cost")}</td>${o("m_cost")}</tr>
+    <tr><td>Stripe card fees</td>${o("m_card_n")}<td></td>${o("m_card")}</tr>
+    <tr><td>Other costs (shipping labels, bags, delivery)</td><td></td><td>${beCell("mn_other")}</td>${o("m_other")}</tr>
+    <tr><td>Upfront costs (samples, setup fee)</td><td></td><td>${beCell("mn_setup")}</td>${o("m_setup")}</tr>
+    <tr class="result"><td colspan="3">Left over</td>${o("m_left")}</tr>
+    <tr class="sub"><td colspan="3">Each extra shirt nets</td>${o("m_per")}</tr>
+    <tr class="sub"><td colspan="3">To break even: more shirts to sell</td>${o("m_need")}</tr>`;
+
+  document.querySelectorAll("input[data-be]").forEach((inp) => {
+    inp.addEventListener("input", () => {
+      const k = inp.dataset.be;
+      if (inp.value === "") delete BE_TYPED[k]; else BE_TYPED[k] = Number(inp.value);
+      inp.classList.toggle("fill", inp.value === "");
+      try { localStorage.setItem(BE_KEY, JSON.stringify(BE_TYPED)); } catch {}
+      beCompute();
+    });
+  });
+  beCompute();
+}
+
+function beCompute() {
+  const out = {};
+  // 1. one ticket
+  const price = beN("ticket_price"), keep = beKeep(price), planKeep = bePlanKeep();
+  const spread = beN("take_rate") / 100 - beN("stripe_pct") / 100;
+  Object.assign(out, {
+    t_price: beUsd(price), t_cut: beUsd(price * beN("take_rate") / 100),
+    t_pct: "−" + beUsd(price * beN("stripe_pct") / 100), t_fixed: "−" + beUsd(beN("stripe_fixed")),
+    t_keep: beSigned(keep), t_floor: spread > 0 ? beUsd(beN("stripe_fixed") / spread) : "never",
+    t_refund: beUsd(beCard(price)), t_plan: `we keep ${beUsd(planKeep)}`,
+  });
+
+  // 2. running costs
+  let total = 0;
+  const cover = (m) => [beNeed(m, keep), beNeed(m, planKeep)];
+  BE_RUNNING.forEach(([k, , , months]) => {
+    if (!months) { out["r_m_" + k] = "not monthly"; out["r_t_" + k] = out["r_p_" + k] = "—"; return; }
+    const m = beN(k) / months; total += m;
+    out["r_m_" + k] = beVal(k) == null ? '<span class="neg">not known</span>' : beUsd(m);
+    [out["r_t_" + k], out["r_p_" + k]] = beVal(k) == null ? ["—", "—"] : cover(m);
+  });
+  const monthStart = startOfMonthIso();
+  const thisMonth = (p) => (p.paid_at ?? p.created_at) >= monthStart;
+  const refundLoss = (CACHE.payments || []).filter((p) => p.status === "refunded" && thisMonth(p))
+    .reduce((a, p) => a + beCard(p.amount_cents / 100), 0);
+  total += refundLoss;
+  out.r_m_refunds = beUsd(refundLoss); [out.r_t_refunds, out.r_p_refunds] = cover(refundLoss);
+  out.r_total = beUsd(total); [out.r_total_t, out.r_total_p] = cover(total);
+  const tix = (CACHE.payments || []).filter((p) => p.status === "paid" && p.kind === "ralley_join" && thisMonth(p));
+  const inTix = tix.reduce((a, p) => a + (p.application_fee_cents || 0) / 100 - beCard(p.amount_cents / 100), 0);
+  const inPlans = (CACHE.subscriptions || []).filter((s) => s.status === "active")
+    .reduce((a, s) => a + (PLAN_PRICE_CENTS[s.plan] || 0) / 100, 0);
+  const left = inTix + inPlans - total;
+  out.r_in_tix = beSigned(inTix); out.r_in_plans = beUsd(inPlans); out.r_left = beSigned(left);
+  [out.r_left_t, out.r_left_p] = left >= 0 ? ['<span class="pos">covered</span>', '<span class="pos">covered</span>'] : cover(-left);
+  const unknown = BE_RUNNING.filter(([k, , , m]) => m && beVal(k) == null).length;
+  $("be-running-note").textContent = `${unknown ? `${unknown} cost${unknown === 1 ? " is" : "s are"} not written down yet, so the real total is higher. ` : ""}"Tickets a month" uses the ticket price in sheet 1. This month's ticket cut includes Club Ralley's own events, where the 10% is the company paying itself.`;
+
+  // 3. Homecoming 5K
+  const appN = beN("k5_app"), webN = beN("k5_web"), appP = beN("k5_app_price"), webP = beN("k5_web_price");
+  const kIn = appN * appP + webN * webP + beN("k5_sponsors");
+  const drinksN = appN + webN + beN("k5_free"), drinks = drinksN * beN("k5_drink"), tip = drinks * beN("k5_tip") / 100;
+  const card = appN * beCard(appP) + webN * beCard(webP);
+  const kOut = beN("k5_shirts") * beN("k5_shirt_cost") + drinks + tip + card, kLeft = kIn - kOut;
+  const perDrink = beN("k5_drink") * (1 + beN("k5_tip") / 100);
+  const perApp = appP - perDrink - beCard(appP), perWeb = webP - perDrink - beCard(webP);
+  Object.assign(out, {
+    k_app: beUsd(appN * appP), k_web: beUsd(webN * webP), k_sp: beUsd(beN("k5_sponsors")), k_in: beUsd(kIn),
+    k_shirts: beUsd(beN("k5_shirts") * beN("k5_shirt_cost")), k_drinks_n: fmtNum(drinksN), k_drinks: beUsd(drinks),
+    k_tip: beUsd(tip), k_card_n: fmtNum(appN + webN), k_card: beUsd(card), k_out: beUsd(kOut), k_left: beSigned(kLeft),
+    k_need_app: beNeed(-kLeft, perApp), k_need_web: beNeed(-kLeft, perWeb),
+    k_need_sp: kLeft >= 0 ? '<span class="pos">covered</span>' : beUsd(-kLeft),
+    k_per_app: beUsd(perApp), k_per_web: beUsd(perWeb),
+  });
+  $("be-5k-note").textContent = (BE_LIVE._k5_title ? `Ticket counts and prices come from the app ("${BE_LIVE._k5_title}", paid and not refunded). ` : "Ticket counts are the saved ones from the Google Sheet; the app's 5K could not be found. ")
+    + "Shirts, drinks and sponsors are from the Homecoming 5k Finances sheet. Each extra sign-up also costs one drink plus tip and its card fee, which is why it nets less than the ticket price.";
+
+  // 4. Mockneck
+  const sold = beN("mn_sold"), mp = beN("mn_price"), mc = beN("mn_cost");
+  const mIn = sold * mp, mCost = sold * mc, mCard = sold * beCard(mp), mLeft = mIn - mCost - mCard - beN("mn_other") - beN("mn_setup");
+  const per = mp - mc - beCard(mp);
+  Object.assign(out, {
+    m_in: beUsd(mIn), m_cost_n: fmtNum(sold), m_cost: beUsd(mCost), m_card_n: fmtNum(sold), m_card: beUsd(mCard),
+    m_other: beUsd(beN("mn_other")), m_setup: beUsd(beN("mn_setup")),
+    m_left: beVal("mn_cost") == null ? '<span class="neg">fill in the cost per shirt</span>' : beSigned(mLeft),
+    m_per: beVal("mn_cost") == null ? "—" : beSigned(per),
+    m_need: beVal("mn_cost") == null ? "—" : beNeed(-mLeft, per),
+  });
+  $("be-merch-note").textContent = (BE_LIVE.mn_sold != null ? "Shirts sold and the average price (before shipping) come from Stripe. " : "Open the Merch tab or this sheet to pull the Mockneck orders from Stripe. ")
+    + "Nobody has written down what a shirt costs us yet, so the left-over line waits for it.";
+
+  document.querySelectorAll("[data-o]").forEach((td) => { td.innerHTML = out[td.dataset.o] ?? ""; });
+  document.querySelectorAll("[data-o-inline]").forEach((s) => { s.innerHTML = out[s.dataset.oInline] ?? ""; });
+}
+
+function renderBreakeven() { beLiveData(); beBuild(); }
+
+$("be-reset").addEventListener("click", () => {
+  BE_TYPED = {};
+  try { localStorage.removeItem(BE_KEY); } catch {}
+  renderBreakeven();
+});
+$("d-be-merch").addEventListener("toggle", (e) => { if (e.target.open && !MERCH_LOADED) loadMerch(); });
 
 // ===== Dropdowns: remember which ones this viewer keeps open =====
 document.querySelectorAll("details.drop[id]").forEach((d) => {
