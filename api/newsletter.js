@@ -4,9 +4,11 @@
 // Drive > Newsletter). The Google Apps Script "Website Newsletter Sign-up"
 // (record: clubralley-site/scripts/newsletter-apps-script.js) hands it over
 // when asked with action=list, but only after checking the caller's Supabase
-// login with is_founder(). This function just passes the caller's token along,
-// so there is no key to keep here.
+// login with is_founder(). This function passes the caller's token and the
+// public anon key along, so there is no secret to keep here.
 
+// Public by design (also in index.html); the script uses it to ask Supabase is_founder().
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkc3RxbHRlemhxbmNmbGpvcXRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NjE3NTIsImV4cCI6MjA5MzIzNzc1Mn0.Miau9eMXTkPGySZwGh8z6_e3pwbWSeSFAaLp2breazs";
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyNl9HmohjbGtpmksAkDPGfEsVH9KGGsMAEkZg_AMc1KxCAgjQUU3jXXj8jkI3UQDNdOQ/exec";
 
 module.exports = async (req, res) => {
@@ -19,7 +21,7 @@ module.exports = async (req, res) => {
     r = await fetch(SCRIPT_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ action: "list", token: jwt }),
+      body: new URLSearchParams({ action: "list", token: jwt, apikey: SUPABASE_ANON_KEY }),
       redirect: "follow",
     });
   } catch {
