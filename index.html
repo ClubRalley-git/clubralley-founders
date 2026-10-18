@@ -103,6 +103,47 @@
   .up-row span.when { color: var(--muted); }
   .linkbtn { background: none; border: 0; padding: 12px 22px 18px; font: inherit; font-size: 14px; font-weight: 700; color: var(--brand-dark); cursor: pointer; text-decoration: underline; }
 
+  /* Goals: mind map, like the org board's Goals page (2026-10-18) */
+  .goals-note { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
+  .goals-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+  .gmap { position: relative; display: grid; grid-template-columns: 1fr 170px 1fr; gap: 36px 24px; align-items: center; }
+  .gmap svg.glines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  .gcenter { grid-column: 2; grid-row: 1 / span 9; justify-self: center; width: 150px; height: 96px; border-radius: 22px; background: #9B86D0; color: #fff; font-size: 30px; font-weight: 800; letter-spacing: .5px; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; }
+  .gbranch { display: flex; align-items: center; gap: 34px; position: relative; z-index: 1; }
+  .gbranch.left { grid-column: 1; justify-content: flex-end; }
+  .gbranch.right { grid-column: 3; justify-content: flex-start; }
+  .gpill { flex: 0 0 auto; min-width: 104px; padding: 13px 18px; border-radius: 18px; font-size: 16px; font-weight: 800; text-align: center; border: 0; font-family: inherit; color: var(--text); cursor: pointer; }
+  .gcards { display: flex; flex-direction: column; gap: 10px; width: 150px; }
+  .gcard { border: 2px solid transparent; border-radius: 16px; padding: 10px 12px; text-align: center; cursor: pointer; font-family: inherit; color: var(--text); }
+  .gcard:hover { filter: brightness(.97); }
+  .gcard.done { border-color: #33473D; }
+  .gcard .gname { font-size: 12px; font-weight: 800; line-height: 1.25; }
+  .gcard .gnum { font-size: 24px; font-weight: 800; line-height: 1.15; }
+  .gcard .gof { font-size: 11px; color: var(--muted); }
+  .gcard .gbar { height: 5px; border-radius: 3px; background: rgba(0,0,0,.09); margin: 6px 4px; overflow: hidden; }
+  .gcard .gbar div { height: 100%; background: #33473D; }
+  .gcard .gby { font-size: 11px; color: var(--muted); }
+  .gcard .gby.late { color: #B8321F; font-weight: 800; }
+  .gcard .glive { font-size: 9px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--green); }
+  .gadd { align-self: center; font: inherit; font-size: 12px; padding: 4px 12px; border-radius: 999px; border: 1px dashed #B9BFB3; background: transparent; color: var(--muted); cursor: pointer; }
+  dialog.gdlg { border: 1px solid var(--border); border-radius: 16px; padding: 22px; width: min(380px, calc(100vw - 32px)); }
+  dialog.gdlg::backdrop { background: rgba(23,33,28,.35); }
+  dialog.gdlg h3 { margin: 0 0 12px; font-size: 18px; }
+  dialog.gdlg label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); margin: 10px 0 4px; }
+  dialog.gdlg input, dialog.gdlg select { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 10px; font: inherit; font-size: 14px; }
+  dialog.gdlg .row { display: flex; gap: 10px; } dialog.gdlg .row > div { flex: 1; }
+  dialog.gdlg .acts { display: flex; gap: 8px; margin-top: 18px; justify-content: flex-end; flex-wrap: wrap; }
+  dialog.gdlg .acts .del { margin-right: auto; color: #B8321F; }
+  #tab-goals { container-type: inline-size; }
+  @container (max-width: 820px) {
+    .gmap { grid-template-columns: 1fr; gap: 22px; }
+    .gmap svg.glines { display: none; }
+    .gcenter { grid-column: 1; grid-row: auto !important; height: 64px; font-size: 24px; }
+    .gbranch.left, .gbranch.right { grid-column: 1; grid-row: auto !important; flex-direction: column; align-items: stretch; gap: 10px; justify-content: flex-start; }
+    .gbranch.left .gpill { order: -1; }
+    .gcards { width: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  }
+
   /* Login */
   .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
   .login-card {
@@ -355,6 +396,7 @@
     <nav id="tabs" aria-label="Dashboard sections">
       <div class="group">
         <button class="tab active" data-tab="home" type="button">Home <span class="count urgent" id="home-count"></span></button>
+        <button class="tab" data-tab="goals" type="button">Goals</button>
       </div>
       <div class="group">
         <div class="group-label">People</div>
@@ -889,6 +931,18 @@
 
   <!-- Merch. One dropdown per item; Mockneck is the first. Orders come from
        Stripe Payment Links via the founder-merch-orders Edge Function. -->
+  <!-- Goals: same mind map as the org board's Goals page. Players is live; the rest is typed. -->
+  <section id="tab-goals" style="display:none">
+    <p class="goals-note">Click a bubble to update where you are. <b>Players</b> counts itself from the app. Anything you type is saved on this computer only, so the other founders will not see it; to change a number for everyone, ask Claude to update the saved goals.</p>
+    <div class="goals-bar">
+      <button class="btn-solid" type="button" id="g-add">+ Add goal</button>
+      <button class="btn-line" type="button" id="g-branch">+ New branch</button>
+      <button class="btn-line" type="button" id="g-reset">Go back to the saved goals</button>
+    </div>
+    <div class="gmap" id="gmap"></div>
+    <dialog class="gdlg" id="g-dlg"><form method="dialog" id="g-form"></form></dialog>
+  </section>
+
   <section id="tab-merch" style="display:none">
     <div class="loading" id="merch-loading">Loading orders from Stripe…</div>
     <div class="err" id="merch-err" style="display:none"></div>
@@ -1111,6 +1165,7 @@ async function loadOverview() {
   // list rendered before the cache lands shows "—" for everyone.
   if (reviewsCache.length) renderReviews();
   renderHome();
+  renderGoals();
 }
 
 function renderOverview() {
@@ -2834,10 +2889,11 @@ document.querySelectorAll(".tab").forEach((t) => {
   t.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
     t.classList.add("active");
-    ["home","bank","finances","breakeven","users","ralleys","noshows","clubs","ambassadors","reports","reviews","instagram","merch"].forEach((name) => {
+    ["home","goals","bank","finances","breakeven","users","ralleys","noshows","clubs","ambassadors","reports","reviews","instagram","merch"].forEach((name) => {
       $(`tab-${name}`).style.display = name === t.dataset.tab ? "" : "none";
     });
     // Instagram costs ~50 calls to Instagram, so it loads only when opened.
+    if (t.dataset.tab === "goals") renderGoals();
     if (t.dataset.tab === "instagram" && !IG_LOADED) loadInstagram();
     if (t.dataset.tab === "merch" && !MERCH_LOADED) loadMerch();
     if (t.dataset.tab === "bank" && !BANK_LOADED) loadBank();
@@ -2859,6 +2915,173 @@ $("page-date").textContent = new Date().toLocaleDateString("en-US", { weekday: "
 setPageTitle(document.querySelector(".tab.active"));
 // The old Overview tab lives on inside Home's "More numbers" dropdown.
 while ($("tab-overview").firstChild) $("home-more").appendChild($("tab-overview").firstChild);
+
+// ===== Goals (2026-10-18): the org board's Goals mind map, on this dashboard =====
+// GOALS_SAVED is the copy everyone sees, taken from club-ralley-org.netlify.app/goals on 2026-10-18.
+// Edits typed on the page live in this browser only (localStorage), like Break-even.
+// live: "players" reads the real player count instead of a typed number.
+const GOALS_SAVED = [
+  { name: "Social", color: "mint", goals: [
+    { name: "Instagram followers", now: 308, target: 1000, unit: "followers", by: "2026-12-23" },
+    { name: "LinkedIn followers", now: 52, target: 1000, unit: "followers", by: "2026-12-18" },
+    { name: "TikTok followers", now: 57, target: 1000, unit: "followers", by: "2026-12-16" },
+  ]},
+  { name: "Growth", color: "peach", goals: [
+    { name: "Number of users", live: "players", now: 142, target: 1000, unit: "users", by: "2026-10-30" },
+    { name: "Number of events", now: 0, target: 5, unit: "events", by: "2026-12-08" },
+  ]},
+  { name: "Ralley Run", color: "rose", goals: [
+    { name: "Sign ups", now: 61, target: 125, unit: "sign ups", by: "2026-10-14" },
+    { name: "Sponsor money", now: 600, target: 600, unit: "dollars", by: "2026-09-30" },
+  ]},
+  { name: "Outreach", color: "lilac", goals: [
+    { name: "Alumni connected with", now: 1, target: 100, unit: "messages", by: "2026-12-18" },
+    { name: "Alumni meetings", now: 1, target: 50, unit: "", by: "" },
+  ]},
+];
+const G_COLORS = {
+  mint:  { pill: "#CFE5DC", card: "#E6F1EC" },
+  peach: { pill: "#F8D6B5", card: "#FDEEE1" },
+  rose:  { pill: "#EFBDB1", card: "#FAE2DD" },
+  lilac: { pill: "#DDD3F3", card: "#EFEBFA" },
+  sky:   { pill: "#C8DDF2", card: "#E5EFF9" },
+  sand:  { pill: "#E6DDBF", card: "#F4EFDF" },
+};
+const G_KEY = "goals:v1";
+let GOALS = null;
+try { GOALS = JSON.parse(localStorage.getItem(G_KEY) || "null"); } catch {}
+if (!Array.isArray(GOALS)) GOALS = structuredClone(GOALS_SAVED);
+function gSave() { try { localStorage.setItem(G_KEY, JSON.stringify(GOALS)); } catch {} }
+function gNow(g) { return g.live === "players" && CACHE.users?.length ? CACHE.users.length : Number(g.now) || 0; }
+function gBy(by) {
+  if (!by) return "";
+  return "by " + new Date(by + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function renderGoals() {
+  const map = $("gmap"); if (!map) return;
+  const today = new Date().toISOString().slice(0, 10);
+  let html = `<svg class="glines" id="glines" aria-hidden="true"></svg><div class="gcenter" id="gcenter">GOALS</div>`;
+  GOALS.forEach((b, bi) => {
+    const c = G_COLORS[b.color] || G_COLORS.mint;
+    const side = bi % 2 === 0 ? "left" : "right";
+    const cards = b.goals.map((g, gi) => {
+      const now = gNow(g), target = Number(g.target) || 0;
+      const pct = target ? Math.min(100, Math.round((now / target) * 100)) : 0;
+      const done = target && now >= target;
+      const late = !done && g.by && g.by < today;
+      return `<button type="button" class="gcard${done ? " done" : ""}" style="background:${c.card}" data-g="${bi}:${gi}">
+        <div class="gname">${escapeHtml(g.name)}</div>
+        <div class="gnum">${fmtNum(now)}${done ? " ✓" : ""}</div>
+        <div class="gof">of ${fmtNum(target)}${g.unit ? " " + escapeHtml(g.unit) : ""}</div>
+        <div class="gbar"><div style="width:${pct}%"></div></div>
+        ${g.live ? `<div class="glive">Live from the app</div>` : ""}
+        ${g.by ? `<div class="gby${late ? " late" : ""}">${gBy(g.by)}</div>` : ""}
+      </button>`;
+    }).join("");
+    const pill = `<button type="button" class="gpill" style="background:${c.pill}" data-b="${bi}">${escapeHtml(b.name)}</button>`;
+    const stack = `<div class="gcards">${cards}<button type="button" class="gadd" data-addto="${bi}">+ Add goal</button></div>`;
+    html += `<div class="gbranch ${side}" style="grid-row:${Math.floor(bi / 2) + 1}">${side === "left" ? stack + pill : pill + stack}</div>`;
+  });
+  map.innerHTML = html;
+  $("gcenter").style.gridRow = `1 / span ${Math.max(1, Math.ceil(GOALS.length / 2))}`;
+  requestAnimationFrame(drawGoalLines);
+}
+
+// Arrows: center → each branch, branch → each of its goals. Computed from where things landed.
+function drawGoalLines() {
+  const map = $("gmap"), svg = $("glines");
+  if (!map || !svg || !map.offsetParent || getComputedStyle(svg).display === "none") return;
+  const box = map.getBoundingClientRect();
+  const r = (el) => { const b = el.getBoundingClientRect(); return { l: b.left - box.left, r: b.right - box.left, t: b.top - box.top, b: b.bottom - box.top, cx: b.left - box.left + b.width / 2, cy: b.top - box.top + b.height / 2 }; };
+  const center = r($("gcenter"));
+  let d = "";
+  map.querySelectorAll(".gbranch").forEach((br) => {
+    const left = br.classList.contains("left");
+    const pill = r(br.querySelector(".gpill"));
+    const sx = left ? center.l + 8 : center.r - 8, sy = center.cy + (pill.cy < center.cy ? -30 : pill.cy > center.cy ? 30 : 0);
+    const ex = left ? pill.r : pill.l, ey = pill.cy;
+    d += `<line x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" marker-end="url(#garrow)" />`;
+    br.querySelectorAll(".gcard").forEach((cardEl) => {
+      const k = r(cardEl);
+      const px = left ? pill.l : pill.r, tx = left ? k.r + 2 : k.l - 2;
+      const mx = (px + tx) / 2;
+      d += `<path d="M${px},${pill.cy} C${mx},${pill.cy} ${mx},${k.cy} ${tx},${k.cy}" marker-end="url(#garrow)" />`;
+    });
+  });
+  svg.innerHTML = `<defs><marker id="garrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#33473D"/></marker></defs>
+    <g fill="none" stroke="#33473D" stroke-width="2" stroke-linecap="round">${d}</g>`;
+}
+window.addEventListener("resize", () => requestAnimationFrame(drawGoalLines));
+
+function gDialog(title, fields, onSave, onDelete) {
+  const f = $("g-form");
+  f.innerHTML = `<h3>${escapeHtml(title)}</h3>${fields}
+    <div class="acts">${onDelete ? `<button type="button" class="btn-line del" id="g-del">Delete</button>` : ""}
+      <button type="button" class="btn-line" id="g-cancel">Cancel</button>
+      <button type="submit" class="btn-solid">Save</button></div>`;
+  $("g-cancel").onclick = () => $("g-dlg").close();
+  if (onDelete) $("g-del").onclick = () => { if (confirm("Delete this?")) { onDelete(); gSave(); renderGoals(); $("g-dlg").close(); } };
+  f.onsubmit = (e) => { e.preventDefault(); onSave(new FormData(f)); gSave(); renderGoals(); $("g-dlg").close(); };
+  $("g-dlg").showModal();
+}
+const gEsc = (v) => escapeHtml(String(v ?? ""));
+function gGoalFields(g, bi) {
+  const branches = GOALS.map((b, i) => `<option value="${i}"${i === bi ? " selected" : ""}>${gEsc(b.name)}</option>`).join("");
+  return `<label>Goal</label><input name="name" required value="${gEsc(g.name)}">
+    <div class="row"><div><label>Where we are</label>${g.live ? `<input disabled value="${gNow(g)} (live)">` : `<input name="now" type="number" step="any" value="${gEsc(g.now)}">`}</div>
+      <div><label>Goal number</label><input name="target" type="number" step="any" required value="${gEsc(g.target)}"></div></div>
+    <div class="row"><div><label>Counting what</label><input name="unit" value="${gEsc(g.unit)}" placeholder="followers"></div>
+      <div><label>By when</label><input name="by" type="date" value="${gEsc(g.by)}"></div></div>
+    <label>Branch</label><select name="branch">${branches}</select>`;
+}
+function gReadGoal(fd, g) {
+  g.name = fd.get("name").trim();
+  if (!g.live) g.now = Number(fd.get("now")) || 0;
+  g.target = Number(fd.get("target")) || 0;
+  g.unit = fd.get("unit").trim();
+  g.by = fd.get("by") || "";
+  return Number(fd.get("branch"));
+}
+function gEditGoal(bi, gi) {
+  const g = GOALS[bi].goals[gi];
+  gDialog("Update goal", gGoalFields(g, bi), (fd) => {
+    const to = gReadGoal(fd, g);
+    if (to !== bi) { GOALS[bi].goals.splice(gi, 1); GOALS[to].goals.push(g); }
+  }, () => GOALS[bi].goals.splice(gi, 1));
+}
+function gNewGoal(bi) {
+  if (!GOALS.length) return gNewBranch();
+  const g = { name: "", now: 0, target: 100, unit: "", by: "" };
+  gDialog("Add goal", gGoalFields(g, bi), (fd) => { const to = gReadGoal(fd, g); GOALS[to].goals.push(g); });
+}
+function gBranchFields(b) {
+  const colors = Object.keys(G_COLORS).map((k) => `<option value="${k}"${k === b.color ? " selected" : ""}>${k}</option>`).join("");
+  return `<label>Branch name</label><input name="name" required value="${gEsc(b.name)}"><label>Color</label><select name="color">${colors}</select>`;
+}
+function gNewBranch() {
+  const b = { name: "", color: Object.keys(G_COLORS)[GOALS.length % 6], goals: [] };
+  gDialog("New branch", gBranchFields(b), (fd) => { b.name = fd.get("name").trim(); b.color = fd.get("color"); GOALS.push(b); });
+}
+function gEditBranch(bi) {
+  const b = GOALS[bi];
+  gDialog("Edit branch", gBranchFields(b), (fd) => { b.name = fd.get("name").trim(); b.color = fd.get("color"); },
+    () => GOALS.splice(bi, 1));
+}
+$("gmap").addEventListener("click", (e) => {
+  const c = e.target.closest("[data-g]"), p = e.target.closest("[data-b]"), a = e.target.closest("[data-addto]");
+  if (c) { const [bi, gi] = c.dataset.g.split(":").map(Number); gEditGoal(bi, gi); }
+  else if (p) gEditBranch(Number(p.dataset.b));
+  else if (a) gNewGoal(Number(a.dataset.addto));
+});
+$("g-add").onclick = () => gNewGoal(0);
+$("g-branch").onclick = gNewBranch;
+$("g-reset").onclick = () => {
+  if (!confirm("Throw away what you typed here and go back to the saved goals?")) return;
+  try { localStorage.removeItem(G_KEY); } catch {}
+  GOALS = structuredClone(GOALS_SAVED); renderGoals();
+};
+renderGoals();
 
 // ===== Helpers: aggregation + rendering =====
 function groupCount(items, keyFn) {
