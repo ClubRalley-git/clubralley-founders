@@ -933,7 +933,7 @@
        Stripe Payment Links via the founder-merch-orders Edge Function. -->
   <!-- Goals: same mind map as the org board's Goals page. Players is live; the rest is typed. -->
   <section id="tab-goals" style="display:none">
-    <p class="goals-note">Click a bubble to update where you are. <b>Players</b> counts itself from the app. Anything you type is saved on this computer only, so the other founders will not see it; to change a number for everyone, ask Claude to update the saved goals.</p>
+    <p class="goals-note">Click a bubble to update where you are. <b>Users</b>, <b>5K sign ups</b>, <b>TikTok</b> and <b>LinkedIn</b> fill themselves in with real numbers (Instagram too, once Meta lets us back in). Anything you type is saved on this computer only, so the other founders will not see it; to change a number for everyone, ask Claude to update the saved goals.</p>
     <div class="goals-bar">
       <button class="btn-solid" type="button" id="g-add">+ Add goal</button>
       <button class="btn-line" type="button" id="g-branch">+ New branch</button>
@@ -2285,6 +2285,7 @@ async function loadInstagram(fresh = false) {
 
 function renderInstagram(d) {
   const p = d.profile ?? {};
+  if (typeof p.followers_count === "number") { G_LIVE.instagram = p.followers_count; renderGoals(); }
   $("ig-followers").textContent = fmtNum(p.followers_count);
   $("ig-followers-sub").textContent = `${fmtNum(p.media_count)} posts · following ${fmtNum(p.follows_count)}`;
   const l7 = d.last7 ?? {}, l28 = d.last28 ?? {};
@@ -2893,7 +2894,7 @@ document.querySelectorAll(".tab").forEach((t) => {
       $(`tab-${name}`).style.display = name === t.dataset.tab ? "" : "none";
     });
     // Instagram costs ~50 calls to Instagram, so it loads only when opened.
-    if (t.dataset.tab === "goals") renderGoals();
+    if (t.dataset.tab === "goals") { renderGoals(); loadGoalsLive(); }
     if (t.dataset.tab === "instagram" && !IG_LOADED) loadInstagram();
     if (t.dataset.tab === "merch" && !MERCH_LOADED) loadMerch();
     if (t.dataset.tab === "bank" && !BANK_LOADED) loadBank();
@@ -2922,16 +2923,16 @@ while ($("tab-overview").firstChild) $("home-more").appendChild($("tab-overview"
 // live: "players" reads the real player count instead of a typed number.
 const GOALS_SAVED = [
   { name: "Social", color: "mint", goals: [
-    { name: "Instagram followers", now: 308, target: 1000, unit: "followers", by: "2026-12-23" },
-    { name: "LinkedIn followers", now: 52, target: 1000, unit: "followers", by: "2026-12-18" },
-    { name: "TikTok followers", now: 57, target: 1000, unit: "followers", by: "2026-12-16" },
+    { name: "Instagram followers", live: "instagram", now: 308, target: 1000, unit: "followers", by: "2026-12-23" },
+    { name: "LinkedIn followers", live: "linkedin", now: 52, target: 1000, unit: "followers", by: "2026-12-18" },
+    { name: "TikTok followers", live: "tiktok", now: 57, target: 1000, unit: "followers", by: "2026-12-16" },
   ]},
   { name: "Growth", color: "peach", goals: [
     { name: "Number of users", live: "players", now: 142, target: 1000, unit: "users", by: "2026-10-30" },
     { name: "Number of events", now: 0, target: 5, unit: "events", by: "2026-12-08" },
   ]},
   { name: "Ralley Run", color: "rose", goals: [
-    { name: "Sign ups", now: 61, target: 125, unit: "sign ups", by: "2026-10-14" },
+    { name: "Sign ups", live: "k5", now: 61, target: 125, unit: "sign ups", by: "2026-10-14" },
     { name: "Sponsor money", now: 600, target: 600, unit: "dollars", by: "2026-09-30" },
   ]},
   { name: "Outreach", color: "lilac", goals: [
@@ -2951,8 +2952,38 @@ const G_KEY = "goals:v1";
 let GOALS = null;
 try { GOALS = JSON.parse(localStorage.getItem(G_KEY) || "null"); } catch {}
 if (!Array.isArray(GOALS)) GOALS = structuredClone(GOALS_SAVED);
+// A copy typed before a goal went live keeps the goal live.
+GOALS.forEach((b) => b.goals.forEach((g) => {
+  const saved = GOALS_SAVED.flatMap((x) => x.goals).find((x) => x.name === g.name);
+  if (saved?.live && !g.live) g.live = saved.live;
+}));
 function gSave() { try { localStorage.setItem(G_KEY, JSON.stringify(GOALS)); } catch {} }
-function gNow(g) { return g.live === "players" && CACHE.users?.length ? CACHE.users.length : Number(g.now) || 0; }
+// Live numbers. null = could not be read; the card then shows the typed number and says so.
+const G_LIVE = { instagram: undefined, linkedin: undefined, tiktok: undefined, read_at: null };
+const G_LIVE_LABEL = { players: "the app", k5: "5K tickets in the app", tiktok: "TikTok", linkedin: "LinkedIn", instagram: "Instagram" };
+function gLiveVal(key) {
+  if (key === "players") return CACHE.users?.length || null;
+  if (key === "k5") return BE_LIVE && BE_LIVE._k5_title ? (BE_LIVE.k5_app || 0) + (BE_LIVE.k5_web || 0) : null;
+  return typeof G_LIVE[key] === "number" ? G_LIVE[key] : G_LIVE[key] === undefined ? undefined : null;
+}
+function gNow(g) { const v = g.live ? gLiveVal(g.live) : null; return typeof v === "number" ? v : Number(g.now) || 0; }
+function gLiveLine(g) {
+  const v = gLiveVal(g.live);
+  if (v === undefined) return `<div class="glive" style="color:var(--muted)">Checking ${G_LIVE_LABEL[g.live]}…</div>`;
+  if (v === null) return `<div class="glive" style="color:var(--amber)">${g.live === "instagram" ? "Instagram is blocked, typed number" : "Could not read " + G_LIVE_LABEL[g.live] + ", typed number"}</div>`;
+  return `<div class="glive">Live from ${G_LIVE_LABEL[g.live]}</div>`;
+}
+let G_FETCHED = false;
+async function loadGoalsLive() {
+  if (G_FETCHED) return; G_FETCHED = true;
+  try {
+    const r = await fetch("/api/goals");
+    const j = await r.json();
+    G_LIVE.tiktok = j.tiktok ?? null; G_LIVE.linkedin = j.linkedin ?? null; G_LIVE.read_at = j.read_at;
+  } catch { G_LIVE.tiktok = null; G_LIVE.linkedin = null; }
+  renderGoals();
+  if (G_LIVE.instagram === undefined) { if (!IG_LOADED) await loadInstagram(); if (G_LIVE.instagram === undefined) G_LIVE.instagram = null; renderGoals(); }
+}
 function gBy(by) {
   if (!by) return "";
   return "by " + new Date(by + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -2975,7 +3006,7 @@ function renderGoals() {
         <div class="gnum">${fmtNum(now)}${done ? " ✓" : ""}</div>
         <div class="gof">of ${fmtNum(target)}${g.unit ? " " + escapeHtml(g.unit) : ""}</div>
         <div class="gbar"><div style="width:${pct}%"></div></div>
-        ${g.live ? `<div class="glive">Live from the app</div>` : ""}
+        ${g.live ? gLiveLine(g) : ""}
         ${g.by ? `<div class="gby${late ? " late" : ""}">${gBy(g.by)}</div>` : ""}
       </button>`;
     }).join("");
@@ -3029,7 +3060,7 @@ const gEsc = (v) => escapeHtml(String(v ?? ""));
 function gGoalFields(g, bi) {
   const branches = GOALS.map((b, i) => `<option value="${i}"${i === bi ? " selected" : ""}>${gEsc(b.name)}</option>`).join("");
   return `<label>Goal</label><input name="name" required value="${gEsc(g.name)}">
-    <div class="row"><div><label>Where we are</label>${g.live ? `<input disabled value="${gNow(g)} (live)">` : `<input name="now" type="number" step="any" value="${gEsc(g.now)}">`}</div>
+    <div class="row"><div><label>Where we are</label>${g.live && typeof gLiveVal(g.live) === "number" ? `<input disabled value="${gNow(g)} (live)">` : `<input name="now" type="number" step="any" value="${gEsc(g.now)}">`}</div>
       <div><label>Goal number</label><input name="target" type="number" step="any" required value="${gEsc(g.target)}"></div></div>
     <div class="row"><div><label>Counting what</label><input name="unit" value="${gEsc(g.unit)}" placeholder="followers"></div>
       <div><label>By when</label><input name="by" type="date" value="${gEsc(g.by)}"></div></div>
@@ -3037,7 +3068,7 @@ function gGoalFields(g, bi) {
 }
 function gReadGoal(fd, g) {
   g.name = fd.get("name").trim();
-  if (!g.live) g.now = Number(fd.get("now")) || 0;
+  if (fd.has("now")) g.now = Number(fd.get("now")) || 0;
   g.target = Number(fd.get("target")) || 0;
   g.unit = fd.get("unit").trim();
   g.by = fd.get("by") || "";
