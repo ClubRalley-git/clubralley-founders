@@ -421,6 +421,7 @@
       <div class="group">
         <div class="group-label">Marketing</div>
         <button class="tab" data-tab="instagram" type="button">Instagram</button>
+        <button class="tab" data-tab="newsletter" type="button">Newsletter</button>
       </div>
     </nav>
     <div class="foot">
@@ -929,6 +930,42 @@
     </div>
   </section>
 
+  <!-- Newsletter (read-only, via /api/newsletter -> the Google sign-up script, founders only) -->
+  <section id="tab-newsletter" style="display:none">
+    <div class="loading" id="nl-loading">Loading sign-ups…</div>
+    <div class="err" id="nl-err" style="display:none"></div>
+    <div id="nl-content" style="display:none">
+      <div class="grid-4">
+        <div class="kpi dark"><div class="lbl">Signed up</div><div class="num" id="nl-signed">0</div><div class="sub" id="nl-signed-sub">—</div></div>
+        <div class="kpi"><div class="lbl">Invited by email</div><div class="num" id="nl-invited">0</div><div class="sub">Potential Newsletter List</div></div>
+        <div class="kpi"><div class="lbl">Invited who signed up</div><div class="num" id="nl-conv">0</div><div class="sub" id="nl-conv-sub">—</div></div>
+        <div class="kpi"><div class="lbl">New from the website</div><div class="num" id="nl-new">0</div><div class="sub">signed up without an invite</div></div>
+      </div>
+
+      <details class="drop" id="d-nl-list" open>
+        <summary>Everyone who signed up <span class="hint">newest first</span></summary>
+        <div class="drop-body">
+          <div class="toolbar-row"><button class="btn" id="csv-nl">Export CSV</button></div>
+          <div class="table-scroll"><table class="tbl" id="nl-tbl"><thead><tr><th>Name</th><th>Email</th><th>Signed up</th><th>Was invited</th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </details>
+
+      <details class="drop" id="d-nl-links">
+        <summary>Links <span class="hint">sheets, sign-up page, Resend</span></summary>
+        <div class="drop-body">
+          <ul style="margin:0; padding-left:18px; line-height:1.9">
+            <li><a href="https://docs.google.com/spreadsheets/d/1Rd3lUfkXIUZMdjhCv-L9Pwp41RsNYt5cFxI2dulzHKo/edit" target="_blank" rel="noopener">Newsletter List</a> (the real sign-ups, Google Sheet in team@clubralley.com)</li>
+            <li><a href="https://docs.google.com/spreadsheets/d/1uzKxbjo-QFjgo9Ouq1_XeMFNxJmyk5RqezaKa5IQQts/edit" target="_blank" rel="noopener">Potential Newsletter List</a> (the people invited on Oct 18, not sign-ups)</li>
+            <li><a href="https://www.clubralley.com/newsletter" target="_blank" rel="noopener">www.clubralley.com/newsletter</a> (the sign-up page)</li>
+            <li><a href="https://resend.com/broadcasts" target="_blank" rel="noopener">Resend broadcasts</a> (where the monthly email is sent)</li>
+          </ul>
+          <p style="font-size:12px; color:var(--muted); margin:10px 0 0">Monthly email: add contacts in Resend from the Newsletter List only (people who signed up), and pick the segment inside the Add contacts window.</p>
+        </div>
+      </details>
+      <p style="font-size:11px; color:var(--muted); margin-top:10px" id="nl-fetched"></p>
+    </div>
+  </section>
+
   <!-- Merch. One dropdown per item; Mockneck is the first. Orders come from
        Stripe Payment Links via the founder-merch-orders Edge Function. -->
   <!-- Goals: same mind map as the org board's Goals page. Players is live; the rest is typed. -->
@@ -1048,7 +1085,7 @@ $("login-form").addEventListener("submit", async (e) => {
 
 $("denied-logout").addEventListener("click", logout);
 $("logout-btn").addEventListener("click", logout);
-$("refresh-btn").addEventListener("click", () => { loadAll(); if (IG_LOADED) loadInstagram(true); if (MERCH_LOADED) loadMerch(); if (BANK_LOADED) loadBank(); });
+$("refresh-btn").addEventListener("click", () => { loadAll(); if (IG_LOADED) loadInstagram(true); if (NL_LOADED) loadNewsletter(); if (MERCH_LOADED) loadMerch(); if (BANK_LOADED) loadBank(); });
 
 async function logout() { await supabase.auth.signOut(); showLogin(); }
 
@@ -2346,6 +2383,64 @@ $("csv-ig").addEventListener("click", () => {
   a.download = `clubralley-instagram-${todayIso()}.csv`; a.click();
 });
 
+// ===== Newsletter =====
+// Sign-ups come from the Newsletter List Google Sheet through /api/newsletter.
+let NL_LOADED = false;
+let NL_ROWS = [];
+
+async function loadNewsletter() {
+  NL_LOADED = true;
+  show("nl-loading"); hide("nl-err");
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const r = await fetch("/api/newsletter", { headers: { Authorization: "Bearer " + (session?.access_token ?? "") } });
+    let body = null;
+    try { body = await r.json(); } catch { /* no JSON: fall through */ }
+    if (!r.ok) throw new Error(body?.error ?? `Could not reach the newsletter service (HTTP ${r.status}).`);
+    renderNewsletter(body);
+    hide("nl-loading"); show("nl-content");
+  } catch (err) {
+    hide("nl-loading");
+    $("nl-err").innerHTML = err instanceof TypeError ? "Could not reach the dashboard server. Nothing is wrong with the list; try Refresh." : escapeHtml(err.message).replace(/^([^.]+\.)/, "<b>$1</b>");
+    show("nl-err");
+    NL_LOADED = false;
+  }
+}
+
+// "Website sign-up, Oct 18, 2026" -> a Date; anything typed by hand -> null.
+function nlDate(from) {
+  const m = String(from || "").match(/([A-Z][a-z]{2} \d{1,2}, \d{4})/);
+  const d = m ? new Date(m[1]) : null;
+  return d && !isNaN(d) ? d : null;
+}
+
+function renderNewsletter(d) {
+  NL_ROWS = (d.signups ?? []).map((x, i) => ({ ...x, date: nlDate(x.from), row: i }))
+    .sort((a, b) => (b.date ?? 0) - (a.date ?? 0) || b.row - a.row);
+  const weekAgo = Date.now() - 7 * 86400000;
+  const week = NL_ROWS.filter((x) => x.date && x.date.getTime() >= weekAgo).length;
+  const invitedIn = NL_ROWS.filter((x) => x.invited).length;
+  $("nl-signed").textContent = fmtNum(NL_ROWS.length);
+  $("nl-signed-sub").textContent = `${fmtNum(week)} in the last 7 days`;
+  $("nl-invited").textContent = fmtNum(d.invited);
+  $("nl-conv").textContent = fmtNum(invitedIn);
+  $("nl-conv-sub").textContent = d.invited ? `${Math.round((invitedIn / d.invited) * 100)}% of the ${fmtNum(d.invited)} invited` : "—";
+  $("nl-new").textContent = fmtNum(NL_ROWS.length - invitedIn);
+  $("nl-tbl").querySelector("tbody").innerHTML = NL_ROWS.length
+    ? NL_ROWS.map((x) => `<tr><td>${escapeHtml(x.name || "—")}</td><td>${escapeHtml(x.email)}</td><td>${x.date ? x.date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : escapeHtml(x.from || "")}</td><td>${x.invited ? "Yes" : "No"}</td></tr>`).join("")
+    : `<tr><td colspan="4" style="color:var(--muted)">No sign-ups yet.</td></tr>`;
+  $("nl-fetched").textContent = `From the Newsletter List sheet at ${fmtDateTime(d.read_at)}. Refresh pulls it again.`;
+}
+
+$("csv-nl").addEventListener("click", () => {
+  const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const lines = [["name", "email", "signed_up", "was_invited"].join(",")].concat(NL_ROWS.map((x) =>
+    [x.name, x.email, x.date ? x.date.toISOString().slice(0, 10) : x.from, x.invited ? "yes" : "no"].map(esc).join(",")));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
+  a.download = `clubralley-newsletter-${todayIso()}.csv`; a.click();
+});
+
 // ===== Merch (Mockneck is the first item) =====
 // Orders come from Stripe through the founder-merch-orders Edge Function;
 // these sales never touch our database.
@@ -2890,12 +2985,13 @@ document.querySelectorAll(".tab").forEach((t) => {
   t.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
     t.classList.add("active");
-    ["home","goals","bank","finances","breakeven","users","ralleys","noshows","clubs","ambassadors","reports","reviews","instagram","merch"].forEach((name) => {
+    ["home","goals","bank","finances","breakeven","users","ralleys","noshows","clubs","ambassadors","reports","reviews","instagram","newsletter","merch"].forEach((name) => {
       $(`tab-${name}`).style.display = name === t.dataset.tab ? "" : "none";
     });
     // Instagram costs ~50 calls to Instagram, so it loads only when opened.
     if (t.dataset.tab === "goals") { renderGoals(); loadGoalsLive(); }
     if (t.dataset.tab === "instagram" && !IG_LOADED) loadInstagram();
+    if (t.dataset.tab === "newsletter" && !NL_LOADED) loadNewsletter();
     if (t.dataset.tab === "merch" && !MERCH_LOADED) loadMerch();
     if (t.dataset.tab === "bank" && !BANK_LOADED) loadBank();
     setPageTitle(t);
