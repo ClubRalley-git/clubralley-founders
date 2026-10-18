@@ -2493,7 +2493,7 @@ const BE_F = {
   t_floor: "= Stripe flat fee ÷ (Our cut % − Stripe %)", t_refund: "= Stripe's fee on the ticket, which Stripe keeps on a refund",
   r_total: "= SUM of every monthly cost above", r_total_t: "= Total every month ÷ what we keep per ticket", r_total_p: "= Total every month ÷ what we keep per Club plan",
   r_in_tix: "= SUM(our 10% on tickets this month) − card fees", r_in_plans: "= SUM(monthly plans paying now)", r_left: "= Coming in this month − Total every month",
-  k_in: "= App tickets + Website tickets + Sponsors", k_out: "= Shirts + Drinks + Tip + Card fees", k_left: "= Total money in − Total money out",
+  k_in: "= App tickets + Website tickets + Sponsors", k_out: "= Shirts + Bar bill + Card fees", k_left: "= Total money in − Total money out",
   k_need_app: "= Shortfall ÷ what one more app sign-up nets", k_need_web: "= Shortfall ÷ what one more website sign-up nets", k_need_sp: "= Shortfall",
   m_left: "= Money in − Shirt costs − Card fees − Other − Upfront", m_per: "= Price − Cost per shirt − Card fee", m_need: "= Shortfall ÷ what one more shirt nets",
 };
@@ -2509,8 +2509,8 @@ const BE_SAVED = {
   ticket_price: 10, take_rate: 10, stripe_pct: 2.9, stripe_fixed: 0.30, plan_price: 30,
   supabase: 25, resend: 20, apple_yr: 99, play_once: 25,
   vercel: null, expo: null, domain_yr: null, workspace: null, amb: null, insurance_yr: null, accounting_yr: null,
-  k5_app: 52, k5_app_price: 10, k5_web: 5, k5_web_price: 15, k5_sponsors: 600, k5_free: 1,
-  k5_shirts: 120, k5_shirt_cost: 10.44, k5_drink: 3, k5_tip: 20,
+  k5_app: 52, k5_app_price: 10, k5_web: 5, k5_web_price: 15, k5_sponsors: 600,
+  k5_shirts: 120, k5_shirt_cost: 10.44, k5_bar: 114.70, // bar bill incl. tip, actual (Ava, 2026-10-18)
   mn_sold: 0, mn_price: null, mn_cost: null, mn_other: null, mn_setup: null,
 };
 const BE_KEY = "be:v1";
@@ -2608,9 +2608,7 @@ function beBuild() {
     <tr class="total"><td colspan="3">Total money in</td>${o("k_in")}</tr>
     <tr class="sub"><td colspan="4"><b>Money out</b></td></tr>
     <tr><td>Shirts</td><td>${beCell("k5_shirts")}</td><td>${beCell("k5_shirt_cost")}</td>${o("k_shirts")}</tr>
-    <tr><td>Free spots on the roster (the host, no ticket, still gets a drink)</td><td>${beCell("k5_free")}</td><td></td><td></td></tr>
-    <tr><td>Drink tickets (every sign-up plus free spots)</td>${o("k_drinks_n")}<td>${beCell("k5_drink")}</td>${o("k_drinks")}</tr>
-    <tr><td>Tip on the drink tab, %</td><td></td><td>${beCell("k5_tip")}</td>${o("k_tip")}</tr>
+    <tr><td>Bar bill, including tip (actual)</td><td></td><td>${beCell("k5_bar")}</td>${o("k_bar")}</tr>
     <tr><td>Stripe card fees on every ticket</td>${o("k_card_n")}<td></td>${o("k_card")}</tr>
     <tr class="total"><td colspan="3">Total money out</td>${o("k_out")}</tr>
     <tr class="result"><td colspan="3">Left over</td>${o("k_left")}</tr>
@@ -2684,21 +2682,19 @@ function beCompute() {
   // 3. Homecoming 5K
   const appN = beN("k5_app"), webN = beN("k5_web"), appP = beN("k5_app_price"), webP = beN("k5_web_price");
   const kIn = appN * appP + webN * webP + beN("k5_sponsors");
-  const drinksN = appN + webN + beN("k5_free"), drinks = drinksN * beN("k5_drink"), tip = drinks * beN("k5_tip") / 100;
   const card = appN * beCard(appP) + webN * beCard(webP);
-  const kOut = beN("k5_shirts") * beN("k5_shirt_cost") + drinks + tip + card, kLeft = kIn - kOut;
-  const perDrink = beN("k5_drink") * (1 + beN("k5_tip") / 100);
-  const perApp = appP - perDrink - beCard(appP), perWeb = webP - perDrink - beCard(webP);
+  const kOut = beN("k5_shirts") * beN("k5_shirt_cost") + beN("k5_bar") + card, kLeft = kIn - kOut;
+  const perApp = appP - beCard(appP), perWeb = webP - beCard(webP);
   Object.assign(out, {
     k_app: beUsd(appN * appP), k_web: beUsd(webN * webP), k_sp: beUsd(beN("k5_sponsors")), k_in: beUsd(kIn),
-    k_shirts: beUsd(beN("k5_shirts") * beN("k5_shirt_cost")), k_drinks_n: fmtNum(drinksN), k_drinks: beUsd(drinks),
-    k_tip: beUsd(tip), k_card_n: fmtNum(appN + webN), k_card: beUsd(card), k_out: beUsd(kOut), k_left: beSigned(kLeft),
+    k_shirts: beUsd(beN("k5_shirts") * beN("k5_shirt_cost")), k_bar: beUsd(beN("k5_bar")),
+    k_card_n: fmtNum(appN + webN), k_card: beUsd(card), k_out: beUsd(kOut), k_left: beSigned(kLeft),
     k_need_app: beNeed(-kLeft, perApp), k_need_web: beNeed(-kLeft, perWeb),
     k_need_sp: kLeft >= 0 ? '<span class="pos">covered</span>' : beUsd(-kLeft),
     k_per_app: beUsd(perApp), k_per_web: beUsd(perWeb),
   });
   $("be-5k-note").textContent = (BE_LIVE._k5_title ? `Ticket counts and prices come from the app ("${BE_LIVE._k5_title}", paid and not refunded). ` : "Ticket counts are the saved ones from the Google Sheet; the app's 5K could not be found. ")
-    + "Shirts, drinks and sponsors are from the Homecoming 5k Finances sheet. Each extra sign-up also costs one drink plus tip and its card fee, which is why it nets less than the ticket price.";
+    + "Shirts and sponsors are from the Homecoming 5k Finances sheet. The bar bill is the real one from the night, tip included. Each extra sign-up nets its ticket price less the card fee.";
 
   // 4. Mockneck
   const sold = beN("mn_sold"), mp = beN("mn_price"), mc = beN("mn_cost");
