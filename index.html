@@ -103,6 +103,31 @@
   .up-row span.when { color: var(--muted); }
   .linkbtn { background: none; border: 0; padding: 12px 22px 18px; font: inherit; font-size: 14px; font-weight: 700; color: var(--brand-dark); cursor: pointer; text-decoration: underline; }
 
+  /* Team Todo: copy of the Club Ralley Fall Board Google Sheet (2026-10-19) */
+  .todo-note { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
+  .todo-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 18px; }
+  .todo-chip { font: inherit; font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 999px; border: 1px solid #C9CEC4; background: #fff; color: var(--text); cursor: pointer; }
+  .todo-chip[aria-pressed="true"] { background: var(--brand-dark); border-color: var(--brand-dark); color: #fff; }
+  .todo-bar a.btn-line { text-decoration: none; margin-left: auto; font-size: 13px; padding: 7px 14px; }
+  #tab-todo .panel { margin-bottom: 16px; }
+  .todo-day { padding: 10px 22px 12px; border-top: 1px solid #EEF0EB; }
+  .todo-day > b { font-size: 13px; display: block; margin-bottom: 4px; }
+  .todo-day.today > b { color: var(--green); }
+  .todo-day .none { font-size: 13px; color: var(--muted); }
+  .todo-item { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 4px 0; font-size: 14px; }
+  .todo-item .t { flex: 1 1 260px; }
+  .todo-item .n { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+  .todo-item.done .t { text-decoration: line-through; color: var(--muted); }
+  .todo-item .w { font-size: 12px; color: var(--muted); min-width: 92px; }
+  .who-pill { font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+  .who-Ava { background: #DBE6FB; color: #1d4ed8; }
+  .who-Jaycie { background: #D9F0DF; color: #15803d; }
+  .who-Sophia { background: #FBE0EC; color: #be185d; }
+  .who-Maddy { background: #FDE8D2; color: #b45309; }
+  .who-Cat { background: #EAE0FA; color: #6d28d9; }
+  .who-Everyone { background: #ECEEE9; color: #5E6B63; }
+  .todo-rows { padding: 4px 22px 14px; }
+
   /* Goals: mind map, like the org board's Goals page (2026-10-18) */
   .goals-note { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
   .goals-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
@@ -397,6 +422,7 @@
       <div class="group">
         <button class="tab active" data-tab="home" type="button">Home <span class="count urgent" id="home-count"></span></button>
         <button class="tab" data-tab="goals" type="button">Goals</button>
+        <button class="tab" data-tab="todo" type="button">Team Todo</button>
       </div>
       <div class="group">
         <div class="group-label">People</div>
@@ -968,6 +994,15 @@
 
   <!-- Merch. One dropdown per item; Mockneck is the first. Orders come from
        Stripe Payment Links via the founder-merch-orders Edge Function. -->
+  <!-- Team Todo: a copy of the Club Ralley Fall Board Google Sheet. The sheet is the real list. -->
+  <section id="tab-todo" style="display:none">
+    <p class="todo-note" id="todo-note"></p>
+    <div class="todo-bar" id="todo-bar"></div>
+    <section class="panel"><h2>Next 7 days <span id="todo-week-sub"></span></h2><div id="todo-week"></div></section>
+    <section class="panel"><h2>Every week</h2><div class="todo-rows" id="todo-weekly"></div></section>
+    <section class="panel"><h2>Semester list <span id="todo-sem-sub"></span></h2><div class="todo-rows" id="todo-sem"></div></section>
+  </section>
+
   <!-- Goals: same mind map as the org board's Goals page. Players is live; the rest is typed. -->
   <section id="tab-goals" style="display:none">
     <p class="goals-note">Click a bubble to update where you are. <b>Users</b>, <b>5K sign ups</b>, <b>TikTok</b> and <b>LinkedIn</b> fill themselves in with real numbers (Instagram too, once Meta lets us back in). Anything you type is saved on this computer only, so the other founders will not see it; to change a number for everyone, ask Claude to update the saved goals.</p>
@@ -2985,11 +3020,12 @@ document.querySelectorAll(".tab").forEach((t) => {
   t.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
     t.classList.add("active");
-    ["home","goals","bank","finances","breakeven","users","ralleys","noshows","clubs","ambassadors","reports","reviews","instagram","newsletter","merch"].forEach((name) => {
+    ["home","goals","todo","bank","finances","breakeven","users","ralleys","noshows","clubs","ambassadors","reports","reviews","instagram","newsletter","merch"].forEach((name) => {
       $(`tab-${name}`).style.display = name === t.dataset.tab ? "" : "none";
     });
     // Instagram costs ~50 calls to Instagram, so it loads only when opened.
     if (t.dataset.tab === "goals") { renderGoals(); loadGoalsLive(); }
+    if (t.dataset.tab === "todo") renderTodo();
     if (t.dataset.tab === "instagram" && !IG_LOADED) loadInstagram();
     if (t.dataset.tab === "newsletter" && !NL_LOADED) loadNewsletter();
     if (t.dataset.tab === "merch" && !MERCH_LOADED) loadMerch();
@@ -3012,6 +3048,124 @@ $("page-date").textContent = new Date().toLocaleDateString("en-US", { weekday: "
 setPageTitle(document.querySelector(".tab.active"));
 // The old Overview tab lives on inside Home's "More numbers" dropdown.
 while ($("tab-overview").firstChild) $("home-more").appendChild($("tab-overview").firstChild);
+
+// ===== Team Todo (2026-10-19): copy of the Club Ralley Fall Board Google Sheet =====
+// The sheet (clubralley@gmail.com Drive) is the real list and the only place to tick things off.
+// TODO_SAVED is a copy of it taken on TODO_SAVED.asOf; ask Claude to re-copy after the sheet changes.
+const TODO_SAVED = {
+  asOf: "2026-10-19",
+  sheet: "https://docs.google.com/spreadsheets/d/15nJJnz_g1_p86ojNt-yxPAnuJzjQGhV0qRHi-IvNkTk/edit",
+  people: ["Ava", "Jaycie", "Sophia", "Maddy", "Cat"],
+  // dow: 0 Sun … 6 Sat. every: 2 = every other week, counted from `from`.
+  weekly: [
+    { dow: 1, job: "Monday merch post", who: "Jaycie or Cat" },
+    { dow: 1, every: 2, from: "2026-10-19", job: "App relaunch: phone update + Apple and Google builds", who: "Ava" },
+    { dow: 2, job: "Senior spotlight #1", who: "Maddy" },
+    { dow: 3, job: "Post Tuesday's senior spotlight on LinkedIn", who: "Jaycie" },
+    { dow: 4, job: "Senior spotlight #2", who: "Maddy" },
+    { dow: 5, job: "Post Thursday's senior spotlight on LinkedIn", who: "Jaycie" },
+    { dow: 5, job: "One TikTok (by Friday)", who: "Cat" },
+    { dow: 6, job: "Alumni spotlight", who: "Maddy" },
+    { dow: 0, job: "Post Saturday's alumni spotlight on LinkedIn", who: "Jaycie" },
+    { dow: 0, every: 2, from: "2026-10-25", job: "Merch bulk order from the preorders", who: "Jaycie" },
+  ],
+  weeklyFrom: "2026-10-19", weeklyTo: "2026-12-13",
+  // date = the day it is due (null = date TBD). done = ticked on the sheet as of asOf.
+  tasks: [
+    { done: false, when: "Sun Oct 18", date: "2026-10-18", task: "Post the Homecoming 5K recap (Instagram + TikTok)", who: "Jaycie", note: "Photos and video from Jaycie and Maddy, drone from Vance." },
+    { done: false, when: "Sun Oct 18", date: "2026-10-18", task: "Mockneck photo shoot (today or tomorrow)", who: "Everyone", note: "Then swap the new photos onto clubralley.com/shop and Instagram." },
+    { done: true, when: "Sun Oct 18", date: "2026-10-18", task: "Thank-you emails to the 5K sponsors", who: "Ava" },
+    { done: true, when: "Mon Oct 19", date: "2026-10-19", task: "Thank-you emails to the investors from the pitch, one each (morning)", who: "Ava" },
+    { done: false, when: "Mon Oct 19", date: "2026-10-19", task: "Monday merch post: mockneck preorder", who: "Jaycie or Cat" },
+    { done: false, when: "Mon Oct 19", date: "2026-10-19", task: "App relaunch: phone update + Apple and Google builds together", who: "Ava", note: "Every 2 weeks: Oct 19, Nov 2, Nov 16, Nov 30." },
+    { done: false, when: "Mon Oct 19", date: "2026-10-19", task: "Get flowers and cards for Erin, Anna and Julie", who: "Ava + Jaycie" },
+    { done: false, when: "By Tue Oct 20", date: "2026-10-20", task: "Review Bloom and Nuun", who: "Sophia" },
+    { done: false, when: "By Fri Oct 23", date: "2026-10-23", task: "Post: start your own club on Club Ralley", who: "Jaycie" },
+    { done: false, when: "By Fri Oct 23", date: "2026-10-23", task: "Redo the Instagram story highlights", who: "Maddy" },
+    { done: false, when: "By Fri Oct 23", date: "2026-10-23", task: "Write the campus director contract", who: "Ava", note: "Deal so far: one per college, $20 per 100 players who join a Ralley." },
+    { done: false, when: "By Fri Oct 23", date: "2026-10-23", task: "Build the newsletter list: friends, family, investors", who: "Ava + Jaycie" },
+    { done: false, when: "By Fri Oct 23", date: "2026-10-23", task: "Set dates for Jaycie's cardio clinic and the pickleball tournament", who: "Sophia" },
+    { done: false, when: "Sun Oct 25", date: "2026-10-25", task: "Merch bulk order from the preorders", who: "Jaycie", note: "Every 2 weeks: Oct 25, Nov 8, Nov 22, Dec 6. Export sizes from the founder dashboard Merch tab." },
+    { done: false, when: "Sun Oct 25", date: "2026-10-25", task: "Put 20 mocknecks for Culture Coffee (10 M, 10 L) in this merch order", who: "Jaycie", note: "The next order (Nov 8) may not arrive before the Nov 14 run." },
+    { done: false, when: "By Fri Oct 30", date: "2026-10-30", task: "Lock in one club on Club Ralley", who: "Ava + Jaycie" },
+    { done: false, when: "By Fri Oct 30", date: "2026-10-30", task: "Announce the Culture Coffee run (two weeks out)", who: "Sophia" },
+    { done: false, when: "Sun Nov 1", date: "2026-11-01", task: "First monthly newsletter goes out", who: "Jaycie", note: "Then the first Sunday of every month." },
+    { done: false, when: "Before Nov 14", date: "2026-11-13", task: "Culture Coffee run: confirm time, route, start and finish, what they provide", who: "Sophia" },
+    { done: false, when: "Before Nov 14", date: "2026-11-13", task: "Culture Coffee run: create the Ralley in the app", who: "Ava" },
+    { done: false, when: "Sat Nov 14", date: "2026-11-14", task: "Culture Coffee run", who: "Everyone", note: "Jaycie sells the mocknecks." },
+    { done: false, when: "Fri Jan 15", date: "2027-01-15", task: "Move Google Workspace (team email) off Squarespace to Google", who: "Ava", note: "Before it renews Feb 8." },
+    { done: false, when: "By Mon Mar 1", date: "2027-03-01", task: "Move the clubralley.com domain off Squarespace (after Workspace)", who: "Ava", note: "Renews Apr 3. Copy every DNS record to the new host before transferring." },
+    { done: false, when: "Date TBD", date: null, task: "Cardio clinic hosted by Jaycie", who: "Jaycie" },
+    { done: false, when: "Date TBD", date: null, task: "Pickleball tournament", who: "Sophia" },
+  ],
+};
+const TODO_KEY = "todo:who";
+let TODO_WHO = "all";
+try { TODO_WHO = localStorage.getItem(TODO_KEY) || "all"; } catch {}
+
+// "Ava + Jaycie", "Jaycie or Cat" and "Everyone" belong to more than one person.
+function todoFor(who) {
+  if (TODO_WHO === "all" || who === "Everyone") return true;
+  return who.split(/\s*(?:\+|or|,)\s*/).includes(TODO_WHO);
+}
+function whoPills(who) {
+  const names = who === "Everyone" ? ["Everyone"] : who.split(/\s*(?:\+|or|,)\s*/);
+  return names.map((n) => `<span class="who-pill who-${escapeHtml(n)}">${escapeHtml(n)}</span>`).join(" ");
+}
+const todoISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+function todoWeeklyOn(d) {
+  const iso = todoISO(d);
+  if (iso < TODO_SAVED.weeklyFrom || iso > TODO_SAVED.weeklyTo) return [];
+  return TODO_SAVED.weekly.filter((w) => {
+    if (w.dow !== d.getDay()) return false;
+    if (!w.every) return true;
+    const days = Math.round((new Date(iso + "T12:00") - new Date(w.from + "T12:00")) / 864e5);
+    return days >= 0 && days % (7 * w.every) === 0;
+  });
+}
+function renderTodo() {
+  const S = TODO_SAVED;
+  const asOf = new Date(S.asOf + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  $("todo-note").innerHTML = `The real list is the <b>Club Ralley Fall Board</b> Google Sheet; tick things off there. This page is a copy of it from <b>${asOf}</b>, so anything ticked or added since then will not show here until Claude copies it again.`;
+  $("todo-bar").innerHTML = ["all", ...S.people].map((p) =>
+    `<button class="todo-chip" type="button" data-who="${p}" aria-pressed="${TODO_WHO === p}">${p === "all" ? "Everyone" : p}</button>`
+  ).join("") + `<a class="btn-line" href="${S.sheet}" target="_blank" rel="noopener">Open the Fall Board</a>`;
+  $("todo-bar").querySelectorAll(".todo-chip").forEach((b) => b.addEventListener("click", () => {
+    TODO_WHO = b.dataset.who;
+    try { localStorage.setItem(TODO_KEY, TODO_WHO); } catch {}
+    renderTodo();
+  }));
+
+  const item = (t, w, done) => `<div class="todo-item${done ? " done" : ""}">${w ? `<span class="w">${escapeHtml(w)}</span>` : ""}<span class="t">${escapeHtml(t.task || t.job)}</span>${whoPills(t.who)}${t.note ? `<span class="n">${escapeHtml(t.note)}</span>` : ""}</div>`;
+
+  // Next 7 days, worked out from today's date. One-off tasks still open and already past their day go on top.
+  const today = new Date(); today.setHours(12, 0, 0, 0);
+  const todayISO = todoISO(today);
+  const late = S.tasks.filter((t) => !t.done && t.date && t.date < todayISO && todoFor(t.who));
+  let html = late.length ? `<div class="todo-day"><b>Earlier, not ticked on ${asOf}</b>${late.map((t) => item(t, t.when)).join("")}</div>` : "";
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today); d.setDate(today.getDate() + i);
+    const iso = todoISO(d);
+    // A weekly job that also sits on the semester list (same name that day) shows once.
+    const oneOff = S.tasks.filter((t) => t.date === iso && todoFor(t.who));
+    const weekly = todoWeeklyOn(d).filter((w) => todoFor(w.who) && !oneOff.some((t) => t.task.startsWith(w.job.split(":")[0])));
+    const label = (i === 0 ? "Today · " : i === 1 ? "Tomorrow · " : "") + d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+    const rows = [...weekly.map((w) => item(w)), ...oneOff.map((t) => item(t, t.when.startsWith("By") || t.when.startsWith("Before") ? t.when : "", t.done))];
+    html += `<div class="todo-day${i === 0 ? " today" : ""}"><b>${label}</b>${rows.join("") || `<div class="none">Nothing on the list</div>`}</div>`;
+  }
+  $("todo-week").innerHTML = html;
+  $("todo-week-sub").textContent = TODO_WHO === "all" ? "" : `· ${TODO_WHO}`;
+
+  const dayName = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const order = [1, 2, 3, 4, 5, 6, 0];
+  const weekly = [...S.weekly].sort((a, b) => order.indexOf(a.dow) - order.indexOf(b.dow)).filter((w) => todoFor(w.who));
+  $("todo-weekly").innerHTML = weekly.map((w) => item(w, (w.every ? "Every other " : "") + dayName[w.dow])).join("") || `<div class="todo-item"><span class="t" style="color:var(--muted)">Nothing weekly</span></div>`;
+
+  const sem = S.tasks.filter((t) => todoFor(t.who));
+  const open = sem.filter((t) => !t.done).length;
+  $("todo-sem-sub").textContent = `· ${open} open, ${sem.length - open} done`;
+  $("todo-sem").innerHTML = sem.map((t) => item(t, t.when, t.done)).join("");
+}
 
 // ===== Goals (2026-10-18): the org board's Goals mind map, on this dashboard =====
 // GOALS_SAVED is the copy everyone sees, taken from club-ralley-org.netlify.app/goals on 2026-10-18.
