@@ -654,7 +654,7 @@
         <div class="home-kpi"><div class="lbl">Sent to the bank so far</div><div class="num" id="bk-sent">$0</div><div class="sub" id="bk-sent-sub">—</div></div>
         <div class="home-kpi"><div class="lbl">Monthly costs</div><div class="num" id="bk-costs">$0</div><div class="sub">from Break-even; paid out of the bank</div></div>
       </div>
-      <p class="explain" style="margin:0">Stripe numbers are live. We can't see the Chase account itself, so the estimate starts from the last bank balance someone typed in and adds every Stripe payout that landed after that day. Type the real balance from the Chase app any time to reset it. What you type stays on this computer only.</p>
+      <p class="explain" style="margin:0">Stripe numbers are live. We can't see the Chase account itself, so the estimate starts from the last bank balance someone typed in and adds every Stripe payout that landed after that day. Type the real balance from the Chase app any time to reset it. <span class="shared-status"></span></p>
       <div class="xl-book" id="bk-book">
         <div class="xl-bar"><span class="xl-name" id="bk-name">A1</span><span class="xl-fx">fx</span><span class="xl-formula" id="bk-formula"></span></div>
         <div class="xl-sheet" data-sheet="bank"><table class="sheet" id="bk-ledger"></table></div>
@@ -673,7 +673,7 @@
   <!-- Break-even: one sheet per thing that costs money -->
   <section id="tab-breakeven" style="display:none">
       <div id="be-page">
-        <p class="explain" style="margin:0 0 12px">Yellow cells can be typed in and everything recalculates. Red cells are costs nobody has written down yet, counted as $0 until filled in. Click any cell to see what it is in the bar on top. What you type stays on this computer only. <button class="linkbtn" id="be-reset" type="button" style="padding:0; font-size:12px">Reset to the saved numbers</button></p>
+        <p class="explain" style="margin:0 0 12px">Yellow cells can be typed in and everything recalculates. Red cells are costs nobody has written down yet, counted as $0 until filled in. Click any cell to see what it is in the bar on top. <span class="shared-status"></span> <button class="linkbtn" id="be-reset" type="button" style="padding:0; font-size:12px">Reset to the saved numbers (for everyone)</button></p>
         <div class="xl-book" id="be-book">
           <div class="xl-bar"><span class="xl-name" id="be-name">A1</span><span class="xl-fx">fx</span><span class="xl-formula" id="be-formula"></span></div>
           <div class="xl-sheet" data-sheet="ticket"><table class="sheet" id="be-ticket"></table></div>
@@ -1136,6 +1136,9 @@ async function loadAll() {
     const { data: row } = await supabase.from("admin_emails").select("email").eq("email", user.email).maybeSingle();
     if (!row) return showDenied();
   }
+
+  // Typed sheet numbers first, so Break-even and Bank render with them.
+  await loadSharedValues();
 
   // loadOverview() loads the backing data once and renders overview,
   // finances, users, and ralleys from it. Pending clubs and reports
@@ -2705,6 +2708,59 @@ try { BE_TYPED = JSON.parse(localStorage.getItem(BE_KEY) || "{}"); } catch {}
 let BE_LIVE = {};
 let BE_MONTH = null;
 
+// ===== Typed numbers, shared by every founder =====
+// Cells typed into the Break-even and Bank sheets are saved in clubralley's
+// founder_values table (migration 0147), one row per cell keyed
+// "<sheet>.<cell>", so everyone sees the same numbers. Until that table
+// exists (or if it can't be read) the page falls back to this browser's
+// localStorage, the old behaviour, and says so under the sheet.
+let SHARED_OK = false;
+const SHARED_SHEETS = { be: { key: BE_KEY, get: () => BE_TYPED }, bank: { key: "bank:v1", get: () => BANK_TYPED } };
+const SAVE_TIMERS = {};
+
+async function loadSharedValues() {
+  const { data, error } = await supabase.from("founder_values").select("key, value");
+  if (error) {
+    SHARED_OK = false;
+    console.warn("founder_values unavailable, typed numbers stay in this browser:", error.message);
+    sharedStatus("For now, what you type is saved on this computer only.", true);
+    return;
+  }
+  SHARED_OK = true;
+  BE_TYPED = {}; BANK_TYPED = {};
+  for (const r of data) {
+    const dot = r.key.indexOf(".");
+    const sheet = r.key.slice(0, dot), k = r.key.slice(dot + 1);
+    if (sheet === "be") BE_TYPED[k] = r.value;
+    else if (sheet === "bank") BANK_TYPED[k] = r.value;
+  }
+  // The old per-browser copies would only confuse a later fallback.
+  try { localStorage.removeItem(BE_KEY); localStorage.removeItem("bank:v1"); } catch {}
+  sharedStatus("What you type here is saved for every founder.");
+}
+
+// v === undefined clears the cell (deletes its row).
+function saveShared(sheet, k, v) {
+  if (!SHARED_OK) {
+    try { localStorage.setItem(SHARED_SHEETS[sheet].key, JSON.stringify(SHARED_SHEETS[sheet].get())); } catch {}
+    return;
+  }
+  const key = `${sheet}.${k}`;
+  clearTimeout(SAVE_TIMERS[key]);
+  sharedStatus("Saving…");
+  SAVE_TIMERS[key] = setTimeout(async () => {
+    const t = supabase.from("founder_values");
+    const { error } = v === undefined
+      ? await t.delete().eq("key", key)
+      : await t.upsert({ key, value: v, updated_at: new Date().toISOString(), updated_by: $("who").textContent || null });
+    sharedStatus(error ? `Couldn't save for everyone: ${error.message}` : "Saved for every founder.", !!error);
+  }, 600);
+}
+
+function sharedStatus(text, bad = false) {
+  document.querySelectorAll(".shared-status").forEach((s) => { s.textContent = text; s.classList.toggle("neg", bad); });
+}
+
 function beVal(k) { if (k in BE_TYPED) return BE_TYPED[k]; if (BE_LIVE[k] != null) return BE_LIVE[k]; return BE_SAVED[k]; }
 const beN = (k) => Number(beVal(k)) || 0;
 function beCell(k) {
@@ -2819,7 +2875,7 @@ function beBuild() {
       const k = inp.dataset.be;
       if (inp.value === "") delete BE_TYPED[k]; else BE_TYPED[k] = Number(inp.value);
       inp.classList.toggle("fill", inp.value === "");
-      try { localStorage.setItem(BE_KEY, JSON.stringify(BE_TYPED)); } catch {}
+      saveShared("be", k, BE_TYPED[k]);
       beCompute();
     });
   });
@@ -2902,7 +2958,13 @@ function beCompute() {
 
 function renderBreakeven() { beLiveData(); beBuild(); }
 
-$("be-reset").addEventListener("click", () => {
+$("be-reset").addEventListener("click", async () => {
+  if (!confirm("Clear every number typed into these sheets, for every founder, and go back to the saved ones?")) return;
+  if (SHARED_OK) {
+    const { error } = await supabase.from("founder_values").delete().like("key", "be.%");
+    if (error) { sharedStatus(`Couldn't reset: ${error.message}`, true); return; }
+    sharedStatus("Reset for every founder.");
+  }
   BE_TYPED = {};
   try { localStorage.removeItem(BE_KEY); } catch {}
   renderBreakeven();
@@ -2998,7 +3060,7 @@ function renderBank() {
   document.querySelectorAll("input[data-bk]").forEach((inp) => inp.addEventListener("change", () => {
     const k = inp.dataset.bk;
     if (inp.value === "") delete BANK_TYPED[k]; else BANK_TYPED[k] = inp.type === "date" ? inp.value : Number(inp.value);
-    try { localStorage.setItem(BANK_KEY, JSON.stringify(BANK_TYPED)); } catch {}
+    saveShared("bank", k, BANK_TYPED[k]);
     renderBank();
   }));
   $("bk-fetched").textContent = `From Stripe at ${fmtDateTime(d.fetched_at)}. Refresh pulls new numbers.`;
