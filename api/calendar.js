@@ -5,7 +5,7 @@
 // CAL_ICS_URL; it never reaches the browser. A caller must send their
 // Supabase session token and pass is_founder(), same gate as the page.
 //
-// Returns the next few weeks of events, with weekly/daily repeats expanded.
+// Returns this month and the next ~3 of events, with weekly/daily repeats expanded.
 // Times are Eastern wall-clock strings ("2026-10-26T18:00"), which is what the
 // calendar is written in.
 
@@ -13,7 +13,7 @@ const SUPABASE_URL = "https://adstqltezhqncfljoqth.supabase.co";
 // Public by design (also in index.html).
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkc3RxbHRlemhxbmNmbGpvcXRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2NjE3NTIsImV4cCI6MjA5MzIzNzc1Mn0.Miau9eMXTkPGySZwGh8z6_e3pwbWSeSFAaLp2breazs";
 const CACHE_MS = 5 * 60 * 1000;
-const DAYS_AHEAD = 35;
+const DAYS_AHEAD = 100; // from the 1st of this month, so whole months fill in
 const TZ = "America/New_York";
 
 let cached = null; // { at, body }
@@ -181,12 +181,13 @@ module.exports = async function handler(req, res) {
   }
   if (!ics.includes("BEGIN:VCALENDAR")) return res.status(502).json({ error: "Google Calendar sent something that is not a calendar." });
 
-  const today = easternWall(new Date()).slice(0, 10) + "T00:00";
+  const from = easternWall(new Date()).slice(0, 8) + "01T00:00";
+  const to = wallAdd(from, DAYS_AHEAD * 1440);
   const body = {
     asOf: new Date().toISOString(),
-    from: today,
-    to: wallAdd(today, DAYS_AHEAD * 1440),
-    events: expand(readEvents(ics), today, wallAdd(today, DAYS_AHEAD * 1440)),
+    from,
+    to,
+    events: expand(readEvents(ics), from, to),
   };
   cached = { at: Date.now(), body };
   return res.status(200).json(body);

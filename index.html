@@ -131,9 +131,35 @@
 
   /* Calendar tab: Club Ralley Social Calendar (2026-10-20) */
   #tab-calendar .panel { margin-bottom: 16px; }
-  .cal-ev { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 4px 0; font-size: 14px; }
-  .cal-ev .w { font-size: 12px; color: var(--muted); min-width: 64px; }
-  .cal-ev .t { flex: 1 1 240px; }
+  .cal-head { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; flex-wrap: wrap; }
+  .cal-head h2 { margin: 0; font-size: 20px; min-width: 170px; text-align: center; }
+  .cal-head .btn-line { padding: 4px 12px; font-size: 18px; line-height: 1; }
+  .cal-key { margin-left: auto; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); background: #fff; border: 1px solid #E3E6DF; border-radius: 14px; overflow: hidden; }
+  .cal-dow { font-size: 11px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; color: var(--muted); padding: 8px; border-bottom: 1px solid #E3E6DF; }
+  .cal-cell { min-height: 112px; padding: 6px 6px 8px; border-right: 1px solid #EEF0EB; border-bottom: 1px solid #EEF0EB; min-width: 0; }
+  .cal-cell:nth-child(7n) { border-right: 0; }
+  .cal-cell.other { background: #FAFBF8; }
+  .cal-cell.other .cal-num { color: #B5BCB2; }
+  .cal-num { font-size: 12px; font-weight: 800; margin-bottom: 4px; display: inline-block; min-width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 999px; }
+  .cal-cell.today .cal-num { background: var(--brand-dark); color: #fff; }
+  .cal-item { display: flex; gap: 5px; align-items: flex-start; font-size: 12px; line-height: 1.3; padding: 2px 0; min-width: 0; }
+  .cal-item .lbl { min-width: 0; overflow-wrap: anywhere; }
+  .cal-item .tm { color: var(--muted); }
+  .cal-item .by { color: var(--muted); }
+  .cal-item.done .lbl { text-decoration: line-through; color: var(--muted); }
+  .cal-dot { flex: 0 0 auto; width: 9px; height: 9px; border-radius: 999px; margin-top: 3px; background: #9AA59C; display: inline-block; }
+  .cal-star { flex: 0 0 auto; font-size: 12px; color: #D99A1E; line-height: 1.3; }
+  .cal-dot.who-Ava { background: #1d4ed8; } .cal-dot.who-Jaycie { background: #15803d; } .cal-dot.who-Sophia { background: #be185d; }
+  .cal-dot.who-SophiaK { background: #0f766e; } .cal-dot.who-Maddy { background: #b45309; } .cal-dot.who-Cat { background: #6d28d9; }
+  @media (max-width: 760px) {
+    .cal-grid { display: block; }
+    .cal-dow, .cal-cell.other, .cal-cell.cal-empty { display: none; }
+    .cal-cell { min-height: 0; border-right: 0; padding: 10px 14px; }
+    .cal-num::after { content: attr(data-day); margin-left: 6px; font-weight: 700; }
+    .cal-num { min-width: 0; text-align: left; }
+    .cal-item { font-size: 14px; }
+  }
 
   /* Goals: mind map, like the org board's Goals page (2026-10-18) */
   .goals-note { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
@@ -1013,11 +1039,13 @@
 
   <!-- Calendar: the Club Ralley Social Calendar (Google), read through /api/calendar. -->
   <section id="tab-calendar" style="display:none">
-    <p class="todo-note">The team's Google calendar (Club Ralley Social Calendar), next 5 weeks. Change things in Google Calendar; this page follows within 5 minutes, or press Refresh.</p>
+    <p class="todo-note">Posts come from the team's Google calendar (Club Ralley Social Calendar) and follow it within 5 minutes. To-dos come from the Team Todo list (a copy of the Fall Board sheet).</p>
     <div class="todo-bar" id="cal-bar"></div>
     <div class="loading" id="cal-loading">Loading the calendar…</div>
     <div class="err" id="cal-err" style="display:none"></div>
-    <div id="cal-weeks"></div>
+    <div class="cal-head"><button class="btn-line" type="button" id="cal-prev" aria-label="Previous month">‹</button><h2 id="cal-month"></h2><button class="btn-line" type="button" id="cal-next" aria-label="Next month">›</button>
+      <span class="cal-key"><span class="cal-dot"></span> post (Google calendar) <span class="cal-star">★</span> to-do (Team Todo)</span></div>
+    <div class="cal-grid" id="cal-weeks"></div>
   </section>
 
   <!-- Goals: same mind map as the org board's Goals page. Players is live; the rest is typed. -->
@@ -2382,44 +2410,62 @@ function calOwner(title) {
   return m ? m[1].trim() : "";
 }
 
+let calMonth = (() => { const k = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" }); return k.slice(0, 7); })();
+$("cal-prev").addEventListener("click", () => { calMonth = calShift(calMonth, -1); renderCalendar(); });
+$("cal-next").addEventListener("click", () => { calMonth = calShift(calMonth, 1); renderCalendar(); });
+function calShift(ym, n) { const d = new Date(ym + "-15T12:00:00Z"); d.setUTCMonth(d.getUTCMonth() + n); return d.toISOString().slice(0, 7); }
+const calNames = (who) => (who === "Everyone" ? [] : who.split(/\s*(?:\+|\bor\b|,)\s*/).filter(Boolean));
+const calFor = (who) => calWho === "Everyone" || who === "Everyone" || calNames(who).includes(calWho);
+
+// Everything on one day: posts (Google calendar) then to-dos (Team Todo, minus the posting slots).
+function calItems(iso) {
+  const posts = CAL_EVENTS.filter((e) => e.start.slice(0, 10) === iso).map((e) => {
+    const who = calOwner(e.title);
+    return { kind: "post", who, label: who ? e.title.replace(/\s*\([^()]+\)\s*$/, "") : e.title, time: e.allDay ? "" : e.start.slice(11, 16) };
+  });
+  const d = new Date(iso + "T12:00");
+  const todos = [
+    ...todoWeeklyOn(d).filter((w) => !w.post).map((w) => ({ kind: "todo", who: w.who, label: w.job })),
+    ...TODO_SAVED.tasks.filter((t) => t.date === iso).map((t) => ({ kind: "todo", who: t.who, label: t.task, done: t.done, note: t.note })),
+  ];
+  // A weekly job that is also on the semester list that day ("App relaunch…") shows once.
+  const key = (x) => x.label.toLowerCase().replace(/[^a-z]/g, "").slice(0, 18);
+  const seen = new Set();
+  const unique = todos.reverse().filter((x) => (seen.has(key(x)) ? false : seen.add(key(x)))).reverse();
+  return [...posts, ...unique].filter((x) => !x.who || calFor(x.who));
+}
+
 function renderCalendar() {
-  const owners = [...new Set(CAL_EVENTS.map((e) => calOwner(e.title)).filter(Boolean))].sort();
+  const owners = [...new Set([...CAL_EVENTS.map((e) => calOwner(e.title)), ...TODO_SAVED.people].flatMap(calNames))].sort();
   $("cal-bar").innerHTML = ["Everyone", ...owners].map((w) =>
     `<button class="todo-chip" type="button" data-who="${escapeHtml(w)}" aria-pressed="${w === calWho}">${escapeHtml(w)}</button>`).join("") +
     `<a class="btn-line" href="https://calendar.google.com/calendar/r?cid=c_01a8a538b2c635d1283099f2c4defad1dcc1e5ae265ac2f924dcf08c3bc5fb04%40group.calendar.google.com" target="_blank" rel="noopener">Open Google Calendar</a>`;
   $("cal-bar").querySelectorAll(".todo-chip").forEach((b) => b.addEventListener("click", () => { calWho = b.dataset.who; renderCalendar(); }));
 
-  const shown = CAL_EVENTS.filter((e) => calWho === "Everyone" || calOwner(e.title).split(/\s+(?:or|\+)\s+/).includes(calWho));
+  const first = new Date(calMonth + "-01T12:00:00Z");
+  $("cal-month").textContent = first.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
   const todayKey = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
-  const dayName = (k) => new Date(k + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" });
-  const time = (at) => { const [h, m] = at.slice(11, 16).split(":").map(Number); return `${h % 12 || 12}${m ? ":" + String(m).padStart(2, "0") : ""}${h < 12 ? "am" : "pm"}`; };
+  const start = new Date(first); start.setUTCDate(1 - first.getUTCDay());
+  const last = new Date(first); last.setUTCMonth(last.getUTCMonth() + 1); last.setUTCDate(0);
+  const cells = Math.ceil((first.getUTCDay() + last.getUTCDate()) / 7) * 7;
+  const tm = (t) => { const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}${m ? ":" + String(m).padStart(2, "0") : ""}${h < 12 ? "am" : "pm"}`; };
+  const pillCls = (who) => "who-" + (calNames(who)[0] ?? "Everyone").replace(/\W/g, "");
 
-  // Group by week (Sunday start), then by day.
-  const weeks = new Map();
-  for (const e of shown) {
-    const day = e.start.slice(0, 10);
-    const d = new Date(day + "T12:00:00Z");
-    const sun = new Date(d); sun.setUTCDate(d.getUTCDate() - d.getUTCDay());
-    const wk = sun.toISOString().slice(0, 10);
-    if (!weeks.has(wk)) weeks.set(wk, new Map());
-    const days = weeks.get(wk);
-    if (!days.has(day)) days.set(day, []);
-    days.get(day).push(e);
+  let html = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => `<div class="cal-dow">${d}</div>`).join("");
+  for (let i = 0; i < cells; i++) {
+    const d = new Date(start); d.setUTCDate(start.getUTCDate() + i);
+    const iso = d.toISOString().slice(0, 10);
+    const other = iso.slice(0, 7) !== calMonth;
+    const items = other ? [] : calItems(iso);
+    const dayLabel = d.toLocaleDateString("en-US", { weekday: "short", month: "short", timeZone: "UTC" });
+    html += `<div class="cal-cell${other ? " other" : ""}${iso === todayKey ? " today" : ""}${!other && !items.length ? " cal-empty" : ""}">
+      <span class="cal-num" data-day="${escapeHtml(dayLabel)}">${d.getUTCDate()}</span>
+      ${items.map((x) => `<div class="cal-item${x.done ? " done" : ""}" title="${escapeHtml([x.label, x.who, x.note].filter(Boolean).join(" · "))}">${
+        x.kind === "post" ? `<span class="cal-dot ${pillCls(x.who)}" aria-label="Post"></span>` : `<span class="cal-star" aria-label="To-do">★</span>`
+      }<span class="lbl">${x.time ? `<span class="tm">${tm(x.time)}</span> ` : ""}${escapeHtml(x.label)}${x.who ? ` <span class="by">· ${escapeHtml(x.who)}</span>` : ""}</span></div>`).join("")}
+    </div>`;
   }
-  if (!weeks.size) { $("cal-weeks").innerHTML = `<section class="panel"><div class="todo-day"><span class="none">Nothing on the calendar${calWho === "Everyone" ? "" : " for " + escapeHtml(calWho)} in the next 5 weeks.</span></div></section>`; return; }
-
-  $("cal-weeks").innerHTML = [...weeks].map(([wk, days]) => `
-    <section class="panel"><h2>Week of ${escapeHtml(dayName(wk).replace(/^\w+, /, ""))}</h2>
-      ${[...days].map(([day, evs]) => `
-        <div class="todo-day${day === todayKey ? " today" : ""}"><b>${escapeHtml(dayName(day))}${day === todayKey ? " · today" : ""}</b>
-          ${evs.map((e) => {
-            const who = calOwner(e.title);
-            const title = who ? e.title.replace(/\s*\([^()]+\)\s*$/, "") : e.title;
-            const pill = who ? `<span class="who-pill who-${escapeHtml(who.split(/\s+(?:or|\+)\s+/)[0].replace(/\W/g, ""))}">${escapeHtml(who)}</span>` : "";
-            return `<div class="cal-ev"><span class="w">${e.allDay ? "All day" : time(e.start)}</span><span class="t">${escapeHtml(title)}</span>${pill}${e.location ? `<span class="todo-item n">${escapeHtml(e.location)}</span>` : ""}</div>`;
-          }).join("")}
-        </div>`).join("")}
-    </section>`).join("");
+  $("cal-weeks").innerHTML = html;
 }
 
 // ===== Instagram =====
@@ -3236,20 +3282,22 @@ while ($("tab-overview").firstChild) $("home-more").appendChild($("tab-overview"
 // The sheet (clubralley@gmail.com Drive) is the real list and the only place to tick things off.
 // TODO_SAVED is a copy of it taken on TODO_SAVED.asOf; ask Claude to re-copy after the sheet changes.
 const TODO_SAVED = {
-  asOf: "2026-10-19",
+  asOf: "2026-10-20",
   sheet: "https://docs.google.com/spreadsheets/d/15nJJnz_g1_p86ojNt-yxPAnuJzjQGhV0qRHi-IvNkTk/edit",
-  people: ["Ava", "Jaycie", "Sophia", "Maddy", "Cat"],
+  people: ["Ava", "Jaycie", "Sophia", "Sophia K", "Maddy", "Cat"],
   // dow: 0 Sun … 6 Sat. every: 2 = every other week, counted from `from`.
+  // post: true = a posting slot, also on the Google calendar (the Calendar tab shows those as circles).
   weekly: [
-    { dow: 1, job: "Monday merch post", who: "Jaycie or Cat" },
+    { dow: 1, post: true, job: "Instagram post", who: "Jaycie" },
+    { dow: 3, post: true, job: "Instagram post", who: "Jaycie" },
     { dow: 1, every: 2, from: "2026-10-19", job: "App relaunch: phone update + Apple and Google builds", who: "Ava" },
-    { dow: 2, job: "Senior spotlight #1", who: "Maddy" },
-    { dow: 3, job: "Post Tuesday's senior spotlight on LinkedIn", who: "Jaycie" },
-    { dow: 4, job: "Senior spotlight #2", who: "Maddy" },
-    { dow: 5, job: "Post Thursday's senior spotlight on LinkedIn", who: "Jaycie" },
-    { dow: 5, job: "One TikTok (by Friday)", who: "Cat" },
-    { dow: 6, job: "Alumni spotlight", who: "Maddy" },
-    { dow: 0, job: "Post Saturday's alumni spotlight on LinkedIn", who: "Jaycie" },
+    { dow: 2, post: true, job: "Senior spotlight #1", who: "Maddy" },
+    { dow: 4, post: true, job: "Senior spotlight #2", who: "Maddy" },
+    { dow: 0, post: true, job: "Alumni spotlight", who: "Maddy" },
+    { dow: 5, post: true, job: "One TikTok", who: "Cat" },
+    { dow: 3, post: true, job: "Post Tuesday's senior spotlight on LinkedIn", who: "Sophia K" },
+    { dow: 2, post: true, job: "Post last Thursday's senior spotlight on LinkedIn", who: "Sophia K" },
+    { dow: 1, post: true, job: "Post Sunday's alumni spotlight on LinkedIn", who: "Sophia K" },
     { dow: 0, every: 2, from: "2026-10-25", job: "Merch bulk order from the preorders", who: "Jaycie" },
   ],
   weeklyFrom: "2026-10-19", weeklyTo: "2026-12-13",
