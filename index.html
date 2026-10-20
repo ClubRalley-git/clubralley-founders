@@ -2707,6 +2707,10 @@ let BE_TYPED = {};
 try { BE_TYPED = JSON.parse(localStorage.getItem(BE_KEY) || "{}"); } catch {}
 let BE_LIVE = {};
 let BE_MONTH = null;
+// Monthly Profit goal (2026-10-20, Ava): this month's cut of other hosts'
+// tickets + plans − running costs, plus the Homecoming 5K's whole left-over
+// in the month it ran (Club Ralley hosted it, so every ticket was ours).
+let BE_PROFIT = null;
 
 // ===== Typed numbers, shared by every founder =====
 // Cells typed into the Break-even and Bank sheets are saved in clubralley's
@@ -2821,6 +2825,7 @@ function beLiveData() {
     if (app.length) BE_LIVE.k5_app_price = Math.round(avg(app) * 100) / 100;
     if (web.length) BE_LIVE.k5_web_price = Math.round(avg(web) * 100) / 100;
     BE_LIVE._k5_title = fiveK.r.title;
+    BE_LIVE._k5_id = fiveK.r.id; BE_LIVE._k5_starts = fiveK.r.starts_at;
   }
   if (MERCH_ORDERS.length) {
     const live = MERCH_ORDERS.filter((x) => x.paid && !x.refunded);
@@ -2947,6 +2952,14 @@ function beCompute() {
   });
   $("be-5k-note").textContent = (BE_LIVE._k5_title ? `Ticket counts and prices come from the app ("${BE_LIVE._k5_title}", paid and not refunded). ` : "Ticket counts are the saved ones from the Google Sheet; the app's 5K could not be found. ")
     + "Shirts and sponsors are from the Homecoming 5k Finances sheet. The bar bill is the real one from the night, tip included. Each extra sign-up nets its ticket price less the card fee.";
+
+  // Monthly profit, for the Goals page. The 5K's tickets come out of the
+  // ticket cut so they are not counted twice.
+  const k5Month = BE_LIVE._k5_starts && BE_LIVE._k5_starts >= monthStart;
+  const inTixOther = tix.filter((p) => p.related_ralley_id !== BE_LIVE._k5_id)
+    .reduce((a, p) => a + (p.application_fee_cents || 0) / 100 - beCard(p.amount_cents / 100), 0);
+  BE_PROFIT = Math.round((inTixOther + inPlans - total + (k5Month ? kLeft : 0)) * 100) / 100;
+  if (typeof renderGoals === "function") renderGoals();
 
   // 4. Mockneck
   const sold = beN("mn_sold"), mp = beN("mn_price"), mc = beN("mn_cost");
@@ -3263,7 +3276,7 @@ const GOALS_SAVED = [
   ]},
   // Added by Ava 2026-10-20.
   { name: "Money", color: "sky", goals: [
-    { name: "Monthly Profit", now: 0, target: 1000, unit: "Profit", by: "2026-10-31" },
+    { name: "Monthly Profit", live: "profit", now: 0, target: 1000, unit: "Profit", by: "2026-10-31" },
   ]},
 ];
 const G_COLORS = {
@@ -3289,9 +3302,10 @@ gKeepLive();
 function gSave() { saveShared("goals", "all", GOALS); }
 // Live numbers. null = could not be read; the card then shows the typed number and says so.
 const G_LIVE = { instagram: undefined, linkedin: undefined, tiktok: undefined, read_at: null };
-const G_LIVE_LABEL = { players: "the app", k5: "5K tickets in the app", tiktok: "TikTok", linkedin: "LinkedIn", instagram: "Instagram" };
+const G_LIVE_LABEL = { profit: "Break-even", players: "the app", k5: "5K tickets in the app", tiktok: "TikTok", linkedin: "LinkedIn", instagram: "Instagram" };
 function gLiveVal(key) {
   if (key === "players") return CACHE.users?.length || null;
+  if (key === "profit") return typeof BE_PROFIT === "number" ? BE_PROFIT : CACHE.payments ? null : undefined;
   if (key === "k5") return BE_LIVE && BE_LIVE._k5_title ? (BE_LIVE.k5_app || 0) + (BE_LIVE.k5_web || 0) : null;
   return typeof G_LIVE[key] === "number" ? G_LIVE[key] : G_LIVE[key] === undefined ? undefined : null;
 }
@@ -3332,7 +3346,7 @@ function renderGoals() {
       const late = !done && g.by && g.by < today;
       return `<button type="button" class="gcard${done ? " done" : ""}" style="background:${c.card}" data-g="${bi}:${gi}">
         <div class="gname">${escapeHtml(g.name)}</div>
-        <div class="gnum">${fmtNum(now)}${done ? " ✓" : ""}</div>
+        <div class="gnum">${g.live === "profit" ? (now < 0 ? "−$" : "$") + fmtNum(Math.round(Math.abs(now))) : fmtNum(now)}${done ? " ✓" : ""}</div>
         <div class="gof">of ${fmtNum(target)}${g.unit ? " " + escapeHtml(g.unit) : ""}</div>
         <div class="gbar"><div style="width:${pct}%"></div></div>
         ${g.live ? gLiveLine(g) : ""}
