@@ -127,6 +127,13 @@
   .who-Cat { background: #EAE0FA; color: #6d28d9; }
   .who-Everyone { background: #ECEEE9; color: #5E6B63; }
   .todo-rows { padding: 4px 22px 14px; }
+  .who-SophiaK { background: #E0F2F1; color: #0f766e; }
+
+  /* Calendar tab: Club Ralley Social Calendar (2026-10-20) */
+  #tab-calendar .panel { margin-bottom: 16px; }
+  .cal-ev { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 4px 0; font-size: 14px; }
+  .cal-ev .w { font-size: 12px; color: var(--muted); min-width: 64px; }
+  .cal-ev .t { flex: 1 1 240px; }
 
   /* Goals: mind map, like the org board's Goals page (2026-10-18) */
   .goals-note { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
@@ -423,6 +430,7 @@
         <button class="tab active" data-tab="home" type="button">Home <span class="count urgent" id="home-count"></span></button>
         <button class="tab" data-tab="goals" type="button">Goals</button>
         <button class="tab" data-tab="todo" type="button">Team Todo</button>
+        <button class="tab" data-tab="calendar" type="button">Calendar</button>
       </div>
       <div class="group">
         <div class="group-label">People</div>
@@ -1003,6 +1011,15 @@
     <section class="panel"><h2>Semester list <span id="todo-sem-sub"></span></h2><div class="todo-rows" id="todo-sem"></div></section>
   </section>
 
+  <!-- Calendar: the Club Ralley Social Calendar (Google), read through /api/calendar. -->
+  <section id="tab-calendar" style="display:none">
+    <p class="todo-note">The team's Google calendar (Club Ralley Social Calendar), next 5 weeks. Change things in Google Calendar; this page follows within 5 minutes, or press Refresh.</p>
+    <div class="todo-bar" id="cal-bar"></div>
+    <div class="loading" id="cal-loading">Loading the calendar…</div>
+    <div class="err" id="cal-err" style="display:none"></div>
+    <div id="cal-weeks"></div>
+  </section>
+
   <!-- Goals: same mind map as the org board's Goals page. Players is live; the rest is typed. -->
   <section id="tab-goals" style="display:none">
     <p class="goals-note">Click a bubble to update where you are. <b>Users</b>, <b>5K sign ups</b>, <b>TikTok</b> and <b>LinkedIn</b> fill themselves in with real numbers (Instagram too, once Meta lets us back in). Anything you add or change here is saved for every founder. <span class="shared-status"></span></p>
@@ -1120,7 +1137,7 @@ $("login-form").addEventListener("submit", async (e) => {
 
 $("denied-logout").addEventListener("click", logout);
 $("logout-btn").addEventListener("click", logout);
-$("refresh-btn").addEventListener("click", () => { loadAll(); if (IG_LOADED) loadInstagram(true); if (NL_LOADED) loadNewsletter(); if (MERCH_LOADED) loadMerch(); if (BANK_LOADED) loadBank(); });
+$("refresh-btn").addEventListener("click", () => { loadAll(); if (IG_LOADED) loadInstagram(true); if (NL_LOADED) loadNewsletter(); if (MERCH_LOADED) loadMerch(); if (BANK_LOADED) loadBank(); if (CAL_LOADED) loadCalendar(true); });
 
 async function logout() { await supabase.auth.signOut(); showLogin(); }
 
@@ -2331,6 +2348,80 @@ $("reviews-filter").addEventListener("click", (e) => {
   btn.classList.add("active"); reviewsFilter = btn.dataset.filter; renderReviews();
 });
 
+// ===== Calendar =====
+// Data comes from /api/calendar (Vercel function holding the private calendar address).
+let CAL_LOADED = false;
+let CAL_EVENTS = [];
+let calWho = "Everyone";
+
+async function loadCalendar(fresh = false) {
+  CAL_LOADED = true;
+  show("cal-loading"); hide("cal-err");
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const r = await fetch("/api/calendar" + (fresh ? "?fresh=1" : ""), {
+      headers: { Authorization: "Bearer " + (session?.access_token ?? "") },
+    });
+    let body = null;
+    try { body = await r.json(); } catch { /* no JSON: fall through */ }
+    if (!r.ok) throw new Error(body?.error ?? `Could not reach the calendar service (HTTP ${r.status}).`);
+    CAL_EVENTS = body.events ?? [];
+    renderCalendar();
+    hide("cal-loading");
+  } catch (err) {
+    hide("cal-loading");
+    $("cal-err").textContent = err instanceof TypeError ? "Could not reach the dashboard server. Try Refresh." : err.message;
+    show("cal-err");
+    CAL_LOADED = false;
+  }
+}
+
+// "Senior spotlight #1 (Maddy)" -> owner "Maddy"; no brackets -> no owner.
+function calOwner(title) {
+  const m = title.match(/\(([^()]+)\)\s*$/);
+  return m ? m[1].trim() : "";
+}
+
+function renderCalendar() {
+  const owners = [...new Set(CAL_EVENTS.map((e) => calOwner(e.title)).filter(Boolean))].sort();
+  $("cal-bar").innerHTML = ["Everyone", ...owners].map((w) =>
+    `<button class="todo-chip" type="button" data-who="${escapeHtml(w)}" aria-pressed="${w === calWho}">${escapeHtml(w)}</button>`).join("") +
+    `<a class="btn-line" href="https://calendar.google.com/calendar/r?cid=c_01a8a538b2c635d1283099f2c4defad1dcc1e5ae265ac2f924dcf08c3bc5fb04%40group.calendar.google.com" target="_blank" rel="noopener">Open Google Calendar</a>`;
+  $("cal-bar").querySelectorAll(".todo-chip").forEach((b) => b.addEventListener("click", () => { calWho = b.dataset.who; renderCalendar(); }));
+
+  const shown = CAL_EVENTS.filter((e) => calWho === "Everyone" || calOwner(e.title).split(/\s+(?:or|\+)\s+/).includes(calWho));
+  const todayKey = new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const dayName = (k) => new Date(k + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" });
+  const time = (at) => { const [h, m] = at.slice(11, 16).split(":").map(Number); return `${h % 12 || 12}${m ? ":" + String(m).padStart(2, "0") : ""}${h < 12 ? "am" : "pm"}`; };
+
+  // Group by week (Sunday start), then by day.
+  const weeks = new Map();
+  for (const e of shown) {
+    const day = e.start.slice(0, 10);
+    const d = new Date(day + "T12:00:00Z");
+    const sun = new Date(d); sun.setUTCDate(d.getUTCDate() - d.getUTCDay());
+    const wk = sun.toISOString().slice(0, 10);
+    if (!weeks.has(wk)) weeks.set(wk, new Map());
+    const days = weeks.get(wk);
+    if (!days.has(day)) days.set(day, []);
+    days.get(day).push(e);
+  }
+  if (!weeks.size) { $("cal-weeks").innerHTML = `<section class="panel"><div class="todo-day"><span class="none">Nothing on the calendar${calWho === "Everyone" ? "" : " for " + escapeHtml(calWho)} in the next 5 weeks.</span></div></section>`; return; }
+
+  $("cal-weeks").innerHTML = [...weeks].map(([wk, days]) => `
+    <section class="panel"><h2>Week of ${escapeHtml(dayName(wk).replace(/^\w+, /, ""))}</h2>
+      ${[...days].map(([day, evs]) => `
+        <div class="todo-day${day === todayKey ? " today" : ""}"><b>${escapeHtml(dayName(day))}${day === todayKey ? " · today" : ""}</b>
+          ${evs.map((e) => {
+            const who = calOwner(e.title);
+            const title = who ? e.title.replace(/\s*\([^()]+\)\s*$/, "") : e.title;
+            const pill = who ? `<span class="who-pill who-${escapeHtml(who.split(/\s+(?:or|\+)\s+/)[0].replace(/\W/g, ""))}">${escapeHtml(who)}</span>` : "";
+            return `<div class="cal-ev"><span class="w">${e.allDay ? "All day" : time(e.start)}</span><span class="t">${escapeHtml(title)}</span>${pill}${e.location ? `<span class="todo-item n">${escapeHtml(e.location)}</span>` : ""}</div>`;
+          }).join("")}
+        </div>`).join("")}
+    </section>`).join("");
+}
+
 // ===== Instagram =====
 // Data comes from /api/instagram (Vercel function holding the read-only token).
 let IG_LOADED = false;
@@ -3111,12 +3202,13 @@ document.querySelectorAll(".tab").forEach((t) => {
   t.addEventListener("click", () => {
     document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
     t.classList.add("active");
-    ["home","goals","todo","bank","finances","breakeven","users","ralleys","noshows","clubs","ambassadors","reports","reviews","instagram","newsletter","merch"].forEach((name) => {
+    ["home","goals","todo","calendar","bank","finances","breakeven","users","ralleys","noshows","clubs","ambassadors","reports","reviews","instagram","newsletter","merch"].forEach((name) => {
       $(`tab-${name}`).style.display = name === t.dataset.tab ? "" : "none";
     });
     // Instagram costs ~50 calls to Instagram, so it loads only when opened.
     if (t.dataset.tab === "goals") { renderGoals(); loadGoalsLive(); }
     if (t.dataset.tab === "todo") renderTodo();
+    if (t.dataset.tab === "calendar" && !CAL_LOADED) loadCalendar();
     if (t.dataset.tab === "instagram" && !IG_LOADED) loadInstagram();
     if (t.dataset.tab === "newsletter" && !NL_LOADED) loadNewsletter();
     if (t.dataset.tab === "merch" && !MERCH_LOADED) loadMerch();
