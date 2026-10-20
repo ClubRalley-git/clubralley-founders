@@ -2484,6 +2484,7 @@ $("csv-nl").addEventListener("click", () => {
 // these sales never touch our database.
 let MERCH_LOADED = false;
 let MERCH_ORDERS = [];
+let MERCH_DONE = false;
 
 async function loadMerch() {
   MERCH_LOADED = true;
@@ -2958,7 +2959,12 @@ function beCompute() {
   const k5Month = BE_LIVE._k5_starts && BE_LIVE._k5_starts >= monthStart;
   const inTixOther = tix.filter((p) => p.related_ralley_id !== BE_LIVE._k5_id)
     .reduce((a, p) => a + (p.application_fee_cents || 0) / 100 - beCard(p.amount_cents / 100), 0);
-  BE_PROFIT = Math.round((inTixOther + inPlans - total + (k5Month ? kLeft : 0)) * 100) / 100;
+  // Mockneck shirts sold this month (Ava, 2026-10-20): what each order nets
+  // after the shirt's cost and the card fee. Upfront and other merch costs
+  // stay on the Break-even page only.
+  const merchMonth = MERCH_ORDERS.filter((x) => x.paid && !x.refunded && x.created * 1000 >= Date.parse(monthStart))
+    .reduce((a, x) => a + (x.amount_cents - (x.shipping_cents || 0)) / 100 - (x.quantity || 1) * beN("mn_cost") - beCard(x.amount_cents / 100), 0);
+  BE_PROFIT = Math.round((inTixOther + inPlans - total + (k5Month ? kLeft : 0) + merchMonth) * 100) / 100;
   if (typeof renderGoals === "function") renderGoals();
 
   // 4. Mockneck
@@ -3305,7 +3311,7 @@ const G_LIVE = { instagram: undefined, linkedin: undefined, tiktok: undefined, r
 const G_LIVE_LABEL = { profit: "Break-even", players: "the app", k5: "5K tickets in the app", tiktok: "TikTok", linkedin: "LinkedIn", instagram: "Instagram" };
 function gLiveVal(key) {
   if (key === "players") return CACHE.users?.length || null;
-  if (key === "profit") return typeof BE_PROFIT === "number" ? BE_PROFIT : CACHE.payments ? null : undefined;
+  if (key === "profit") return !MERCH_DONE ? undefined : typeof BE_PROFIT === "number" ? BE_PROFIT : CACHE.payments ? null : undefined;
   if (key === "k5") return BE_LIVE && BE_LIVE._k5_title ? (BE_LIVE.k5_app || 0) + (BE_LIVE.k5_web || 0) : null;
   return typeof G_LIVE[key] === "number" ? G_LIVE[key] : G_LIVE[key] === undefined ? undefined : null;
 }
@@ -3319,6 +3325,8 @@ function gLiveLine(g) {
 let G_FETCHED = false;
 async function loadGoalsLive() {
   if (G_FETCHED) return; G_FETCHED = true;
+  // Monthly Profit counts this month's shirt sales, which load from Stripe.
+  (MERCH_LOADED ? Promise.resolve() : loadMerch()).finally(() => { MERCH_DONE = true; if (CACHE.payments) renderBreakeven(); renderGoals(); });
   try {
     const r = await fetch("/api/goals");
     const j = await r.json();
