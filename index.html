@@ -1005,11 +1005,11 @@
 
   <!-- Goals: same mind map as the org board's Goals page. Players is live; the rest is typed. -->
   <section id="tab-goals" style="display:none">
-    <p class="goals-note">Click a bubble to update where you are. <b>Users</b>, <b>5K sign ups</b>, <b>TikTok</b> and <b>LinkedIn</b> fill themselves in with real numbers (Instagram too, once Meta lets us back in). Anything you type is saved on this computer only, so the other founders will not see it; to change a number for everyone, ask Claude to update the saved goals.</p>
+    <p class="goals-note">Click a bubble to update where you are. <b>Users</b>, <b>5K sign ups</b>, <b>TikTok</b> and <b>LinkedIn</b> fill themselves in with real numbers (Instagram too, once Meta lets us back in). Anything you add or change here is saved for every founder. <span class="shared-status"></span></p>
     <div class="goals-bar">
       <button class="btn-solid" type="button" id="g-add">+ Add goal</button>
       <button class="btn-line" type="button" id="g-branch">+ New branch</button>
-      <button class="btn-line" type="button" id="g-reset">Go back to the saved goals</button>
+      <button class="btn-line" type="button" id="g-reset">Go back to the saved goals (for everyone)</button>
     </div>
     <div class="gmap" id="gmap"></div>
     <dialog class="gdlg" id="g-dlg"><form method="dialog" id="g-form"></form></dialog>
@@ -2715,7 +2715,8 @@ let BE_MONTH = null;
 // exists (or if it can't be read) the page falls back to this browser's
 // localStorage, the old behaviour, and says so under the sheet.
 let SHARED_OK = false;
-const SHARED_SHEETS = { be: { key: BE_KEY, get: () => BE_TYPED }, bank: { key: "bank:v1", get: () => BANK_TYPED } };
+let SHARED_GOALS = null;
+const SHARED_SHEETS = { be: { key: BE_KEY, get: () => BE_TYPED }, bank: { key: "bank:v1", get: () => BANK_TYPED }, goals: { key: "goals:v1", get: () => GOALS } };
 const SAVE_TIMERS = {};
 
 async function loadSharedValues() {
@@ -2733,10 +2734,19 @@ async function loadSharedValues() {
     const sheet = r.key.slice(0, dot), k = r.key.slice(dot + 1);
     if (sheet === "be") BE_TYPED[k] = r.value;
     else if (sheet === "bank") BANK_TYPED[k] = r.value;
+    else if (r.key === "goals.all" && Array.isArray(r.value)) SHARED_GOALS = r.value;
   }
   // The old per-browser copies would only confuse a later fallback.
   try { localStorage.removeItem(BE_KEY); localStorage.removeItem("bank:v1"); } catch {}
   sharedStatus("What you type here is saved for every founder.");
+  // Goals (2026-10-20, Ava: "everytime i do anything on founder site it should
+  // auto save so everyone can see it"). The whole mind map is one row,
+  // "goals.all". The first browser to load this version shares the goals it
+  // had typed locally; after that everyone reads the shared copy.
+  if (SHARED_GOALS) { GOALS = SHARED_GOALS; gKeepLive(); }
+  else saveShared("goals", "all", GOALS);
+  try { localStorage.removeItem(G_KEY); } catch {}
+  renderGoals();
 }
 
 // v === undefined clears the cell (deletes its row).
@@ -3269,11 +3279,14 @@ let GOALS = null;
 try { GOALS = JSON.parse(localStorage.getItem(G_KEY) || "null"); } catch {}
 if (!Array.isArray(GOALS)) GOALS = structuredClone(GOALS_SAVED);
 // A copy typed before a goal went live keeps the goal live.
-GOALS.forEach((b) => b.goals.forEach((g) => {
-  const saved = GOALS_SAVED.flatMap((x) => x.goals).find((x) => x.name === g.name);
-  if (saved?.live && !g.live) g.live = saved.live;
-}));
-function gSave() { try { localStorage.setItem(G_KEY, JSON.stringify(GOALS)); } catch {} }
+function gKeepLive() {
+  GOALS.forEach((b) => b.goals.forEach((g) => {
+    const saved = GOALS_SAVED.flatMap((x) => x.goals).find((x) => x.name === g.name);
+    if (saved?.live && !g.live) g.live = saved.live;
+  }));
+}
+gKeepLive();
+function gSave() { saveShared("goals", "all", GOALS); }
 // Live numbers. null = could not be read; the card then shows the typed number and says so.
 const G_LIVE = { instagram: undefined, linkedin: undefined, tiktok: undefined, read_at: null };
 const G_LIVE_LABEL = { players: "the app", k5: "5K tickets in the app", tiktok: "TikTok", linkedin: "LinkedIn", instagram: "Instagram" };
@@ -3425,8 +3438,7 @@ $("g-add").onclick = () => gNewGoal(0);
 $("g-branch").onclick = gNewBranch;
 $("g-reset").onclick = () => {
   if (!confirm("Throw away what you typed here and go back to the saved goals?")) return;
-  try { localStorage.removeItem(G_KEY); } catch {}
-  GOALS = structuredClone(GOALS_SAVED); renderGoals();
+  GOALS = structuredClone(GOALS_SAVED); gSave(); renderGoals();
 };
 renderGoals();
 
