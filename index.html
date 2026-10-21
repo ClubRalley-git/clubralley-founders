@@ -127,6 +127,7 @@
   .who-Cat { background: #EAE0FA; color: #6d28d9; }
   .who-Everyone { background: #ECEEE9; color: #5E6B63; }
   .todo-rows { padding: 4px 22px 14px; }
+  .todo-tick { width: 16px; height: 16px; margin: 2px 8px 0 0; accent-color: #2F6B4F; cursor: pointer; flex: 0 0 auto; }
   .who-SophiaK { background: #E0F2F1; color: #0f766e; }
 
   /* Calendar tab: Club Ralley Social Calendar (2026-10-20) */
@@ -2440,7 +2441,7 @@ function calItems(iso) {
   const d = new Date(iso + "T12:00");
   const todos = [
     ...todoWeeklyOn(d).filter((w) => !w.post).map((w) => ({ kind: "todo", who: w.who, label: w.job })),
-    ...TODO_SAVED.tasks.filter((t) => t.date === iso).map((t) => ({ kind: "todo", who: t.who, label: t.task, done: t.done, note: t.note })),
+    ...TODO_SAVED.tasks.filter((t) => t.date === iso).map((t) => ({ kind: "todo", who: t.who, label: t.task, done: todoIsDone(todoTaskKey(t), t.done), note: t.note })),
   ];
   // A weekly job that is also on the semester list that day ("App relaunch…") shows once.
   const key = (x) => x.label.toLowerCase().replace(/[^a-z]/g, "").slice(0, 18);
@@ -2872,7 +2873,7 @@ let BE_PROFIT = null;
 // localStorage, the old behaviour, and says so under the sheet.
 let SHARED_OK = false;
 let SHARED_GOALS = null;
-const SHARED_SHEETS = { be: { key: BE_KEY, get: () => BE_TYPED }, bank: { key: "bank:v1", get: () => BANK_TYPED }, goals: { key: "goals:v1", get: () => GOALS } };
+const SHARED_SHEETS = { be: { key: BE_KEY, get: () => BE_TYPED }, bank: { key: "bank:v1", get: () => BANK_TYPED }, goals: { key: "goals:v1", get: () => GOALS }, todo: { key: "todo-ticks:v1", get: () => TODO_TICKS } };
 const SAVE_TIMERS = {};
 
 async function loadSharedValues() {
@@ -2891,7 +2892,9 @@ async function loadSharedValues() {
     if (sheet === "be") BE_TYPED[k] = r.value;
     else if (sheet === "bank") BANK_TYPED[k] = r.value;
     else if (r.key === "goals.all" && Array.isArray(r.value)) SHARED_GOALS = r.value;
+    else if (sheet === "todo") TODO_TICKS[k] = r.value;
   }
+  if (typeof renderTodo === "function" && $("tab-todo").style.display !== "none") renderTodo();
   // The old per-browser copies would only confuse a later fallback.
   try { localStorage.removeItem(BE_KEY); localStorage.removeItem("bank:v1"); } catch {}
   sharedStatus("What you type here is saved for every founder.");
@@ -3369,10 +3372,28 @@ function todoWeeklyOn(d) {
     return days >= 0 && days % (7 * w.every) === 0;
   });
 }
+// Ticks on Team Todo (2026-10-21, Ava: "on todo i should be able to check things off").
+// One founder_values row per ticked item, "todo.<id>" = { done, at, by }, so a tick
+// saves for every founder. A tick here wins over the done mark in the sheet copy.
+let TODO_TICKS = {};
+function todoId(s) { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return (h >>> 0).toString(36); }
+const todoTaskKey = (t) => todoId("t|" + t.date + "|" + t.task);
+const todoJobKey = (w, iso) => todoId("w|" + iso + "|" + w.job);
+function todoIsDone(key, fallback) { const v = TODO_TICKS[key]; return v ? !!v.done : !!fallback; }
+function todoTick(key, done) {
+  TODO_TICKS[key] = { done, at: new Date().toISOString(), by: $("who").textContent || null };
+  saveShared("todo", key, TODO_TICKS[key]);
+  renderTodo();
+}
+document.addEventListener("change", (e) => {
+  const b = e.target.closest?.("input[data-tick]");
+  if (b) todoTick(b.dataset.tick, b.checked);
+});
+
 function renderTodo() {
   const S = TODO_SAVED;
   const asOf = new Date(S.asOf + "T12:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  $("todo-note").innerHTML = `The real list is the <b>Club Ralley Fall Board</b> Google Sheet; tick things off there. This page is a copy of it from <b>${asOf}</b>, so anything ticked or added since then will not show here until Claude copies it again.`;
+  $("todo-note").innerHTML = `Tick things off here: a tick saves for every founder. The list itself is a copy of the <b>Club Ralley Fall Board</b> Google Sheet from <b>${asOf}</b>, so new tasks added there show up after Claude copies it again. <span class="shared-status"></span>`;
   $("todo-bar").innerHTML = ["all", ...S.people].map((p) =>
     `<button class="todo-chip" type="button" data-who="${p}" aria-pressed="${TODO_WHO === p}">${p === "all" ? "Everyone" : p}</button>`
   ).join("") + `<a class="btn-line" href="${S.sheet}" target="_blank" rel="noopener">Open the Fall Board</a>`;
@@ -3382,13 +3403,13 @@ function renderTodo() {
     renderTodo();
   }));
 
-  const item = (t, w, done) => `<div class="todo-item${done ? " done" : ""}">${w ? `<span class="w">${escapeHtml(w)}</span>` : ""}<span class="t">${escapeHtml(t.task || t.job)}</span>${whoPills(t.who)}${t.note ? `<span class="n">${escapeHtml(t.note)}</span>` : ""}</div>`;
+  const item = (t, w, key) => { const done = key ? todoIsDone(key, t.done) : false; const by = key && TODO_TICKS[key]?.done ? TODO_TICKS[key].by : ""; return `<div class="todo-item${done ? " done" : ""}">${key ? `<input type="checkbox" class="todo-tick" data-tick="${key}"${done ? " checked" : ""} aria-label="Done">` : ""}${w ? `<span class="w">${escapeHtml(w)}</span>` : ""}<span class="t">${escapeHtml(t.task || t.job)}</span>${whoPills(t.who)}${t.note ? `<span class="n">${escapeHtml(t.note)}</span>` : ""}${by ? `<span class="n">Ticked by ${escapeHtml(by)}</span>` : ""}</div>`; };
 
   // Next 7 days, worked out from today's date. One-off tasks still open and already past their day go on top.
   const today = new Date(); today.setHours(12, 0, 0, 0);
   const todayISO = todoISO(today);
-  const late = S.tasks.filter((t) => !t.done && t.date && t.date < todayISO && todoFor(t.who));
-  let html = late.length ? `<div class="todo-day"><b>Earlier, not ticked on ${asOf}</b>${late.map((t) => item(t, t.when)).join("")}</div>` : "";
+  const late = S.tasks.filter((t) => !todoIsDone(todoTaskKey(t), t.done) && t.date && t.date < todayISO && todoFor(t.who));
+  let html = late.length ? `<div class="todo-day"><b>Earlier, not ticked on ${asOf}</b>${late.map((t) => item(t, t.when, todoTaskKey(t))).join("")}</div>` : "";
   for (let i = 0; i < 7; i++) {
     const d = new Date(today); d.setDate(today.getDate() + i);
     const iso = todoISO(d);
@@ -3396,7 +3417,7 @@ function renderTodo() {
     const oneOff = S.tasks.filter((t) => t.date === iso && todoFor(t.who));
     const weekly = todoWeeklyOn(d).filter((w) => todoFor(w.who) && !oneOff.some((t) => t.task.startsWith(w.job.split(":")[0])));
     const label = (i === 0 ? "Today · " : i === 1 ? "Tomorrow · " : "") + d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
-    const rows = [...weekly.map((w) => item(w)), ...oneOff.map((t) => item(t, t.when.startsWith("By") || t.when.startsWith("Before") ? t.when : "", t.done))];
+    const rows = [...weekly.map((w) => item(w, "", todoJobKey(w, iso))), ...oneOff.map((t) => item(t, t.when.startsWith("By") || t.when.startsWith("Before") ? t.when : "", todoTaskKey(t)))];
     html += `<div class="todo-day${i === 0 ? " today" : ""}"><b>${label}</b>${rows.join("") || `<div class="none">Nothing on the list</div>`}</div>`;
   }
   $("todo-week").innerHTML = html;
@@ -3408,9 +3429,9 @@ function renderTodo() {
   $("todo-weekly").innerHTML = weekly.map((w) => item(w, (w.every ? "Every other " : "") + dayName[w.dow])).join("") || `<div class="todo-item"><span class="t" style="color:var(--muted)">Nothing weekly</span></div>`;
 
   const sem = S.tasks.filter((t) => todoFor(t.who));
-  const open = sem.filter((t) => !t.done).length;
+  const open = sem.filter((t) => !todoIsDone(todoTaskKey(t), t.done)).length;
   $("todo-sem-sub").textContent = `· ${open} open, ${sem.length - open} done`;
-  $("todo-sem").innerHTML = sem.map((t) => item(t, t.when, t.done)).join("");
+  $("todo-sem").innerHTML = sem.map((t) => item(t, t.when, todoTaskKey(t))).join("");
 }
 
 // ===== Goals (2026-10-18): the org board's Goals mind map, on this dashboard =====
