@@ -2450,7 +2450,7 @@ function calItems(iso) {
 }
 
 function renderCalendar() {
-  const owners = [...new Set([...CAL_EVENTS.map((e) => calOwner(e.title)), ...TODO_SAVED.people].flatMap(calNames))].sort();
+  const owners = [...new Set([...CAL_EVENTS.filter((e) => !/^2027 Plan:/.test(e.title)).map((e) => calOwner(e.title)), ...TODO_SAVED.people].flatMap(calNames))].sort();
   $("cal-bar").innerHTML = ["Everyone", ...owners].map((w) =>
     `<button class="todo-chip" type="button" data-who="${escapeHtml(w)}" aria-pressed="${w === calWho}">${escapeHtml(w)}</button>`).join("") +
     `<a class="btn-line" href="https://calendar.google.com/calendar/r?cid=c_01a8a538b2c635d1283099f2c4defad1dcc1e5ae265ac2f924dcf08c3bc5fb04%40group.calendar.google.com" target="_blank" rel="noopener">Open Google Calendar</a>`;
